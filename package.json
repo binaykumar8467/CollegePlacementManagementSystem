@@ -1,0 +1,14 @@
+{
+  "name": "college-placement-management-system-mern",
+  "private": true,
+  "version": "1.0.0",
+  "description": "College Placement Management System (MERN) - Student & TPO signup/login with dashboards, jobs, applications, notices. MongoDB local.",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "start": "concurrently \"npm start --prefix backend\" \"npm run preview --prefix frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
