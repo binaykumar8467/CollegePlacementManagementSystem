@@ -116,7 +116,7 @@ export default function StudentProfile() {
 
         <form className="grid" onSubmit={save} style={{ marginTop: 10 }}>
           <div className="grid grid-2">
-            <div><label>Roll No</label><input className="input" value={form.rollNo} onChange={e=>onChange("rollNo", e.target.value)} /></div>
+            <div><label>Roll No</label><input className="input" type="tel" inputMode="numeric" pattern="[0-9]*" value={form.rollNo} onChange={e=>onChange("rollNo", e.target.value.replace(/\D/g, ""))} /></div>
             <div><label>Phone</label><input className="input" type="tel" inputMode="numeric" pattern="[0-9]*" maxLength="10" value={form.phone} onChange={e=>onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} /></div>
           </div>
 

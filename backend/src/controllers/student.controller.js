@@ -143,6 +143,13 @@ async function updateMyProfile(req, res) {
     await ensureUniqueIdentity({ phone, excludeStudentId: st._id });
   }
 
+  if (typeof rollNo === "string") {
+    const normalizedRollNo = rollNo.trim();
+    if (normalizedRollNo && !/^\d+$/.test(normalizedRollNo)) {
+      return res.status(400).json({ message: "Roll number must contain digits only" });
+    }
+  }
+
   setStringOrUnset(st, "rollNo", rollNo);
   setStringOrUnset(st, "department", department);
   setStringOrUnset(st, "year", year);
