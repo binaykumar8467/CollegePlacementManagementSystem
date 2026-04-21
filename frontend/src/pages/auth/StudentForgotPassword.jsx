@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
-import { validateEmail, validatePassword, validatePhone } from "../../lib/signupValidation";
+import { validateEmail, validatePassword } from "../../lib/signupValidation";
 
 export default function StudentForgotPassword() {
   const nav = useNavigate();
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ channel: "email", email: "", phone: "", otp: "", newPassword: "" });
+  const [form, setForm] = useState({ email: "", otp: "", newPassword: "" });
   const [resetToken, setResetToken] = useState("");
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
@@ -15,18 +15,13 @@ export default function StudentForgotPassword() {
   const onChange = (k, v) => {
     setForm((s) => ({ ...s, [k]: v }));
     if (err) setErr("");
-    if (msg && k === "channel") setMsg("");
-  };
-
-  const validateIdentity = () => {
-    return form.channel === "email" ? validateEmail(form.email) : validatePhone(form.phone);
   };
 
   const requestOtp = async (e) => {
     e.preventDefault();
     setErr("");
     setMsg("");
-    const validationError = validateIdentity();
+    const validationError = validateEmail(form.email);
     if (validationError) {
       setErr(validationError);
       return;
@@ -34,11 +29,7 @@ export default function StudentForgotPassword() {
 
     try {
       setLoading(true);
-      const res = await api.post("/api/auth/student/forgot-password", {
-        channel: form.channel,
-        email: form.email,
-        phone: form.phone
-      });
+      await api.post("/api/auth/student/forgot-password", { email: form.email });
       setStep(2);
       setMsg("OTP sent to your registered email address.");
     } catch (e2) {
@@ -60,9 +51,7 @@ export default function StudentForgotPassword() {
     try {
       setLoading(true);
       const res = await api.post("/api/auth/student/forgot-password/verify-otp", {
-        channel: form.channel,
         email: form.email,
-        phone: form.phone,
         otp: form.otp
       });
       setResetToken(res.data?.resetToken || "");
@@ -88,9 +77,7 @@ export default function StudentForgotPassword() {
     try {
       setLoading(true);
       await api.post("/api/auth/student/forgot-password/reset", {
-        channel: form.channel,
         email: form.email,
-        phone: form.phone,
         resetToken,
         newPassword: form.newPassword
       });
@@ -122,15 +109,15 @@ export default function StudentForgotPassword() {
             </div>
             <div className="student-signup-copy student-login-copy">
               <h2>Reset with OTP</h2>
-              <p>Choose whether you want the OTP on your email or phone, verify it, then set a fresh password securely.</p>
+              <p>Receive OTP on your registered email, verify it, and then set a fresh password securely.</p>
               <div className="auth-visual-chips">
                 <span>Email OTP</span>
-                <span>Phone OTP</span>
+                <span>Secure reset</span>
               </div>
               <div className="auth-visual-stats">
                 <div className="auth-visual-stat-card">
                   <strong>Step 1</strong>
-                  <small>Enter your registered email and phone number.</small>
+                  <small>Enter your registered email address.</small>
                 </div>
                 <div className="auth-visual-stat-card">
                   <strong>Step 2</strong>
@@ -144,37 +131,16 @@ export default function StudentForgotPassword() {
             <div className="student-signup-form-head student-login-form-head">
               <h1>Forgot Password</h1>
               <p>
-                {step === 1 ? "Choose OTP channel and enter your registered detail." : step === 2 ? `Enter the OTP sent to your registered ${form.channel}.` : "Create a new password for your account."}
+                {step === 1 ? "Enter your registered email to receive OTP." : step === 2 ? "Enter the OTP sent to your registered email." : "Create a new password for your account."}
               </p>
             </div>
 
             {step === 1 ? (
               <form onSubmit={requestOtp} className="student-signup-form student-login-form">
                 <div>
-                  <label>Receive OTP Via</label>
-                  <div className="row" style={{ gap: 18, flexWrap: "wrap", marginTop: 8 }}>
-                    <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <input type="radio" name="otpChannel" checked={form.channel === "email"} onChange={() => onChange("channel", "email")} />
-                      Email
-                    </label>
-                    <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <input type="radio" name="otpChannel" checked={form.channel === "phone"} onChange={() => onChange("channel", "phone")} />
-                      Phone
-                    </label>
-                  </div>
-                </div>
-
-                {form.channel === "email" ? (
-                <div>
                   <label>Email</label>
                   <input className="input student-signup-input" type="email" placeholder="Enter your registered email" value={form.email} onChange={(e) => onChange("email", e.target.value)} />
                 </div>
-                ) : (
-                <div>
-                  <label>Registered Phone Number</label>
-                  <input className="input student-signup-input" type="tel" inputMode="numeric" pattern="[0-9]*" maxLength="10" placeholder="Enter your registered phone number" value={form.phone} onChange={(e) => onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} />
-                </div>
-                )}
                 <div className="form-error-slot">{err ? <p className="form-error">{err}</p> : null}</div>
                 <button className="btn student-signup-submit" type="submit" disabled={loading}>{loading ? "Sending OTP..." : "Send OTP"}</button>
                 <div className="student-login-links">

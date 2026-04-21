@@ -304,15 +304,13 @@ async function studentLogin(req, res) {
 }
 
 async function studentForgotPassword(req, res) {
-  const { channel, email, phone } = req.body;
-  if (!["email", "phone"].includes(channel)) {
-    return res.status(400).json({ message: "Valid OTP channel required" });
+  const { email } = req.body;
+  if (!email) {
+    return res.status(400).json({ message: "Email is required" });
   }
 
-  const student = channel === "email"
-    ? await Student.findOne({ email: normalizeEmail(email) }).select("+passwordResetOtpHash +passwordResetOtpExpiresAt")
-    : await Student.findOne({ phone: normalizePhone(phone) }).select("+passwordResetOtpHash +passwordResetOtpExpiresAt");
-  if (!student) return res.status(404).json({ message: `Student account not found for this ${channel}` });
+  const student = await Student.findOne({ email: normalizeEmail(email) }).select("+passwordResetOtpHash +passwordResetOtpExpiresAt");
+  if (!student) return res.status(404).json({ message: "Student account not found for this email" });
 
   const otp = generateOtp();
   student.passwordResetOtpHash = hashValue(otp);
@@ -321,34 +319,24 @@ async function studentForgotPassword(req, res) {
   student.passwordResetVerifiedTokenExpiresAt = undefined;
   await student.save();
 
-  if (channel === "email") {
-    await sendStudentPasswordResetOtp({
-      toEmail: student.email,
-      studentName: student.name,
-      otp
-    });
-  } else {
-    await sendStudentPasswordResetSmsOtp({
-      toPhone: student.phone,
-      studentName: student.name,
-      otp
-    });
-  }
+  await sendStudentPasswordResetOtp({
+    toEmail: student.email,
+    studentName: student.name,
+    otp
+  });
 
   return res.json({
-    message: `OTP sent successfully via ${channel === "email" ? "email" : "phone"}`
+    message: "OTP sent successfully via email"
   });
 }
 
 async function verifyStudentForgotPasswordOtp(req, res) {
-  const { channel, email, phone, otp } = req.body;
-  if (!["email", "phone"].includes(channel) || !otp) {
-    return res.status(400).json({ message: "Valid OTP channel and otp required" });
+  const { email, otp } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ message: "Email and otp required" });
   }
 
-  const student = channel === "email"
-    ? await Student.findOne({ email: normalizeEmail(email) }).select("+passwordResetOtpHash +passwordResetOtpExpiresAt +passwordResetVerifiedTokenHash +passwordResetVerifiedTokenExpiresAt")
-    : await Student.findOne({ phone: normalizePhone(phone) }).select("+passwordResetOtpHash +passwordResetOtpExpiresAt +passwordResetVerifiedTokenHash +passwordResetVerifiedTokenExpiresAt");
+  const student = await Student.findOne({ email: normalizeEmail(email) }).select("+passwordResetOtpHash +passwordResetOtpExpiresAt +passwordResetVerifiedTokenHash +passwordResetVerifiedTokenExpiresAt");
 
   if (!student || !student.passwordResetOtpHash || !student.passwordResetOtpExpiresAt) {
     return res.status(400).json({ message: "OTP not requested or already expired" });
@@ -376,18 +364,16 @@ async function verifyStudentForgotPasswordOtp(req, res) {
 }
 
 async function resetStudentPasswordWithOtp(req, res) {
-  const { channel, email, phone, resetToken, newPassword } = req.body;
-  if (!["email", "phone"].includes(channel) || !resetToken || !newPassword) {
-    return res.status(400).json({ message: "Valid channel, resetToken and newPassword required" });
+  const { email, resetToken, newPassword } = req.body;
+  if (!email || !resetToken || !newPassword) {
+    return res.status(400).json({ message: "Email, resetToken and newPassword required" });
   }
 
   if (String(newPassword).length < 6) {
     return res.status(400).json({ message: "Password must be at least 6 characters" });
   }
 
-  const student = channel === "email"
-    ? await Student.findOne({ email: normalizeEmail(email) }).select("+passwordResetVerifiedTokenHash +passwordResetVerifiedTokenExpiresAt")
-    : await Student.findOne({ phone: normalizePhone(phone) }).select("+passwordResetVerifiedTokenHash +passwordResetVerifiedTokenExpiresAt");
+  const student = await Student.findOne({ email: normalizeEmail(email) }).select("+passwordResetVerifiedTokenHash +passwordResetVerifiedTokenExpiresAt");
 
   if (!student || !student.passwordResetVerifiedTokenHash || !student.passwordResetVerifiedTokenExpiresAt) {
     return res.status(400).json({ message: "Reset session expired. Verify OTP again." });
