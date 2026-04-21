@@ -1,85 +1,117 @@
-# College Placement Management System (MERN) — Local MongoDB Compass
+# College Placement Management System (MERN)
 
-✅ Includes:
-- Student **Signup + Login** (JWT auth)
-- TPO **Signup + Login** (JWT auth)
+A full-stack college placement portal built with the MERN stack for Students and TPO users.
+
+## Features
+- Student signup and login
+- TPO signup and login
 - Separate dashboards for Student and TPO
-- TPO: Create jobs, publish notices, view applicants
-- Student: View jobs, apply, view application status, view notices
-- MongoDB: **local only** (MongoDB Compass connection string)
+- Job posting and application management
+- Drive registrations and applicant tracking
+- Student approval workflow for placement eligibility
+- Notices and interview scheduling
+- Placement records with student snapshot details
+- CSV export for reports
+- OTP-based student forgot password flow
 
-## 1) Requirements
-- Node.js 18+ (recommended)
-- MongoDB running locally (MongoDB Compass / MongoDB Community Server)
+## Tech Stack
+- Frontend: React + Vite
+- Backend: Node.js + Express
+- Database: MongoDB (Local or Atlas)
+- Auth: JWT
 
-## 2) Setup (one-time)
-Open terminal in project root:
+## Requirements
+- Node.js 18 or later
+- MongoDB running locally or a MongoDB Atlas connection string
+
+## Project Setup
+Open the terminal in the project root and run:
 
 ```bash
 npm install
 npm run install:all
 ```
 
-## 3) Configure ENV
-### Backend
-Create: `backend/.env`
+## Environment Setup
+Create `backend/.env` by copying `backend/.env.example`, then update the values as needed.
+
+Example:
 
 ```env
 PORT=4518
 MONGO_URI=mongodb://127.0.0.1:27017/college_placement
 JWT_SECRET=change_this_to_any_long_random_string
+
+SMTP_HOST=
+SMTP_PORT=
+SMTP_SECURE=false
+SMTP_USER=
+SMTP_PASS=
+SMTP_FROM=
+
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_FROM_NUMBER=
 ```
 
-> If your MongoDB is different (atlas or auth), update `MONGO_URI` accordingly.
+Notes:
+- For local MongoDB, you can keep `MONGO_URI=mongodb://127.0.0.1:27017/college_placement`
+- For MongoDB Atlas, replace `MONGO_URI` with your Atlas connection string
+- Email OTP will work when SMTP values are configured
+- Phone OTP will work when Twilio values are configured
 
-## 4) Run (Frontend + Backend together)
-From project root:
+## Run the App
+From the project root:
 
 ```bash
 npm run dev
 ```
 
-- Backend: http://localhost:4518
-- Frontend: http://localhost:5173
+Default local URLs:
+- Backend: [http://localhost:4518](http://localhost:4518)
+- Frontend: [http://localhost:5173](http://localhost:5173)
 
-## 5) First Use
-- Go to **/student/signup** and create a student account
-- Go to **/tpo/signup** and create a TPO account
-- Login and use dashboards
+## First Use
+1. Open the student signup page and create a student account
+2. Open the TPO signup page and create a TPO account
+3. Login and use the dashboards
 
-## API Summary
-- Auth:
-  - POST `/api/auth/student/signup`
-  - POST `/api/auth/student/login`
-  - POST `/api/auth/tpo/signup`
-  - POST `/api/auth/tpo/login`
-- Jobs:
-  - GET `/api/jobs` (public)
-  - POST `/api/jobs` (tpo)
-- Applications:
-  - POST `/api/applications/:jobId/apply` (student)
-  - GET `/api/applications/my` (student)
-  - GET `/api/applications/job/:jobId` (tpo)
-  - PATCH `/api/applications/:applicationId/status` (tpo)
-- Notices:
-  - GET `/api/notices` (public)
-  - POST `/api/notices` (tpo)
+## Main API Routes
+### Auth
+- `POST /api/auth/student/signup`
+- `POST /api/auth/student/login`
+- `POST /api/auth/student/request-password-reset`
+- `POST /api/auth/student/verify-password-reset-otp`
+- `POST /api/auth/student/reset-password-with-otp`
+- `POST /api/auth/tpo/signup`
+- `POST /api/auth/tpo/login`
 
-## Notes
-- ⚠️ Passwords are stored in **plain text** (as you requested). This is NOT secure and only OK for college/demo projects.
-- JWT is stored in localStorage (simple college project style)
-- You can extend roles (Admin/Management) later if needed.
+### Jobs
+- `GET /api/jobs`
+- `POST /api/jobs`
 
-### New Options Added
-- TPO can **Approve / Disapprove** students for placement eligibility
-- Student can apply only if **Approved**
-- TPO can **Download Applicants Report (CSV)** for each job
+### Applications
+- `POST /api/applications/:jobId/apply`
+- `GET /api/applications/my`
+- `GET /api/applications/job/:jobId`
+- `PATCH /api/applications/:applicationId/status`
 
+### Notices
+- `GET /api/notices`
+- `POST /api/notices`
 
-## College Background Image
-- Put your college photo in: `frontend/src/assets/college-bg.jpg`
-- Replace the placeholder file and keep the same name.
+## Important Notes
+- Passwords are currently stored in plain text. This is not secure and should only be used for demo or college project purposes.
+- JWT is stored in localStorage for simple authentication handling.
+- Real OTP delivery requires external service configuration:
+  - Email OTP: SMTP provider
+  - Phone OTP: Twilio
+- If SMTP or Twilio is not configured, production-style OTP delivery will not work.
 
+## Assets
+To change the college background image, replace:
 
-## Excel Download Reports
-All CSV downloads include UTF-8 BOM and Excel directive (sep=,) so they open correctly in MS Excel.
+`frontend/src/assets/college-bg.jpg`
+
+## Reports
+CSV downloads include UTF-8 BOM and Excel-friendly formatting so they open properly in Microsoft Excel.
