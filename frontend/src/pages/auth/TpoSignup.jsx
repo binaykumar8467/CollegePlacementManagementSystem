@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
-import { saveAuth } from "../../lib/auth";
 import { validateTpoSignup } from "../../lib/signupValidation";
 
 const EMPTY_VERIFICATION = { signupToken: "", emailVerified: false, phoneVerified: false, readyToComplete: false };
@@ -112,11 +111,10 @@ export default function TpoSignup() {
     try {
       setCompleting(true);
       const res = await api.post("/api/auth/tpo/signup", { signupToken: verification.signupToken });
-      saveAuth({ token: res.data.token, role: "tpo", user: res.data.user });
       setMsg(res.data?.warnings?.length
         ? `Account created. ${res.data.warnings.join(". ")}`
         : "Account created successfully");
-      setTimeout(() => nav("/tpo/dashboard"), 1200);
+      setTimeout(() => nav("/"), 1200);
     } catch (e2) {
       const message = e2?.response?.data?.message || "Signup failed";
       if (/Existing TPO password required/i.test(message)) {

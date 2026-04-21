@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
-import { saveAuth } from "../../lib/auth";
 import { getCurrentPlacementYear, getPlacementYearOptions } from "../../lib/studentOptions";
 import { validateStudentSignup } from "../../lib/signupValidation";
 
@@ -105,11 +104,10 @@ export default function StudentSignup() {
     try {
       setCompleting(true);
       const res = await api.post("/api/auth/student/signup", { signupToken: verification.signupToken });
-      saveAuth({ token: res.data.token, role: "student", user: res.data.user });
       setMsg(res.data?.warnings?.length
         ? `Account created. ${res.data.warnings.join(". ")}`
         : "Account created successfully");
-      setTimeout(() => nav("/student/dashboard"), 1200);
+      setTimeout(() => nav("/"), 1200);
     } catch (e2) {
       setErr(e2?.response?.data?.message || "Signup failed");
     } finally {
