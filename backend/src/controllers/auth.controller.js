@@ -11,9 +11,7 @@ const { normalizePlacementYear, getCurrentPlacementYear } = require("../utils/pl
 const { generateOtp, hashValue, generateVerifiedResetToken } = require("../utils/passwordReset");
 const {
   sendStudentPasswordResetOtp,
-  sendStudentPasswordResetSmsOtp,
   sendSignupOtpEmail,
-  sendSignupOtpSms,
   sendSignupSuccessEmail,
   sendSignupSuccessSms
 } = require("../utils/mailer");
@@ -36,28 +34,20 @@ function getSignupVerificationState(record) {
 }
 
 async function sendSignupOtpByChannel({ channel, record, roleLabel }) {
-  const otp = generateOtp();
-
-  if (channel === "email") {
-    record.emailOtpHash = hashValue(otp);
-    record.emailOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
-    record.emailVerified = false;
-    await record.save();
-    await sendSignupOtpEmail({
-      toEmail: record.email,
-      recipientName: record.name,
-      otp,
-      roleLabel
-    });
-    return;
+  if (channel !== "email") {
+    const err = new Error("Only email OTP is supported");
+    err.statusCode = 400;
+    throw err;
   }
 
-  record.phoneOtpHash = hashValue(otp);
-  record.phoneOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
-  record.phoneVerified = false;
+  const otp = generateOtp();
+
+  record.emailOtpHash = hashValue(otp);
+  record.emailOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  record.emailVerified = false;
   await record.save();
-  await sendSignupOtpSms({
-    toPhone: record.phone,
+  await sendSignupOtpEmail({
+    toEmail: record.email,
     recipientName: record.name,
     otp,
     roleLabel

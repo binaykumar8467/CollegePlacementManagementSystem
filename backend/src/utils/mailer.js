@@ -1,27 +1,42 @@
-const nodemailer = require("nodemailer");
-
-let transporter;
-
-function hasSmtpConfig() {
-  return Boolean(process.env.SMTP_HOST && process.env.SMTP_PORT);
+function hasEmailConfig() {
+  return Boolean(process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL);
 }
 
-function getTransporter() {
-  if (transporter) return transporter;
+function getSender() {
+  return {
+    name: process.env.BREVO_SENDER_NAME || "CPMS Placement Cell",
+    email: process.env.BREVO_SENDER_EMAIL
+  };
+}
 
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT),
-    secure: String(process.env.SMTP_SECURE || "").toLowerCase() === "true" || Number(process.env.SMTP_PORT) === 465,
-    auth: process.env.SMTP_USER
-      ? {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS || ""
-        }
-      : undefined
+async function sendBrevoEmail({ toEmail, recipientName, subject, text, html }) {
+  if (!hasEmailConfig()) {
+    console.log(`[DEV EMAIL] ${toEmail}: ${subject}`);
+    return { delivered: false, previewOnly: true };
+  }
+
+  const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "api-key": process.env.BREVO_API_KEY
+    },
+    body: JSON.stringify({
+      sender: getSender(),
+      to: [{ email: toEmail, name: recipientName || "User" }],
+      subject,
+      textContent: text,
+      htmlContent: html
+    })
   });
 
-  return transporter;
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Email delivery failed: ${errorText}`);
+  }
+
+  return { delivered: true, previewOnly: false };
 }
 
 async function sendStudentPasswordResetOtp({ toEmail, studentName, otp }) {
@@ -36,26 +51,12 @@ async function sendStudentPasswordResetOtp({ toEmail, studentName, otp }) {
   });
 }
 
-async function sendStudentPasswordResetSmsOtp({ toPhone, studentName, otp }) {
-  return sendOtpSms({
-    toPhone,
-    recipientName: studentName,
-    otp,
-    messagePrefix: "your CPMS password reset OTP is"
-  });
-}
-
 async function sendOtpEmail({ toEmail, recipientName, otp, subject, heading, intro, ignoreText }) {
   const text = `Hello ${recipientName || "User"}, ${intro} ${otp}. It will expire in 10 minutes.`;
 
-  if (!hasSmtpConfig()) {
-    console.log(`[DEV EMAIL OTP] ${toEmail}: ${otp}`);
-    return { delivered: false, previewOnly: true };
-  }
-
-  await getTransporter().sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: toEmail,
+  return sendBrevoEmail({
+    toEmail,
+    recipientName,
     subject,
     text,
     html: `
@@ -69,8 +70,6 @@ async function sendOtpEmail({ toEmail, recipientName, otp, subject, heading, int
       </div>
     `
   });
-
-  return { delivered: true, previewOnly: false };
 }
 
 async function sendOtpSms({ toPhone, recipientName, otp, messagePrefix }) {
@@ -115,24 +114,10 @@ async function sendSignupOtpEmail({ toEmail, recipientName, otp, roleLabel }) {
   });
 }
 
-async function sendSignupOtpSms({ toPhone, recipientName, otp, roleLabel }) {
-  return sendOtpSms({
-    toPhone,
-    recipientName,
-    otp,
-    messagePrefix: `your CPMS ${roleLabel.toLowerCase()} signup OTP is`
-  });
-}
-
 async function sendSignupSuccessEmail({ toEmail, recipientName, roleLabel }) {
-  if (!hasSmtpConfig()) {
-    console.log(`[DEV EMAIL] Signup success notification queued for ${toEmail}`);
-    return { delivered: false, previewOnly: true };
-  }
-
-  await getTransporter().sendMail({
-    from: process.env.SMTP_FROM || process.env.SMTP_USER,
-    to: toEmail,
+  return sendBrevoEmail({
+    toEmail,
+    recipientName,
     subject: `Welcome to CPMS - ${roleLabel} account created`,
     text: `Hello ${recipientName || "User"}, your CPMS ${roleLabel.toLowerCase()} account has been created successfully.`,
     html: `
@@ -144,8 +129,6 @@ async function sendSignupSuccessEmail({ toEmail, recipientName, roleLabel }) {
       </div>
     `
   });
-
-  return { delivered: true, previewOnly: false };
 }
 
 async function sendSignupSuccessSms({ toPhone, recipientName, roleLabel }) {
@@ -180,10 +163,9 @@ async function sendSignupSuccessSms({ toPhone, recipientName, roleLabel }) {
 
 module.exports = {
   sendStudentPasswordResetOtp,
-  sendStudentPasswordResetSmsOtp,
   sendSignupOtpEmail,
-  sendSignupOtpSms,
   sendSignupSuccessEmail,
   sendSignupSuccessSms,
-  hasSmtpConfig
+  hasEmailConfig,
+  sendOtpSms
 };

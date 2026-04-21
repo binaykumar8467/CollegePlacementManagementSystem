@@ -42,12 +42,9 @@ PORT=4518
 MONGO_URI=mongodb://127.0.0.1:27017/college_placement
 JWT_SECRET=change_this_to_any_long_random_string
 
-SMTP_HOST=
-SMTP_PORT=
-SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=
+BREVO_API_KEY=
+BREVO_SENDER_EMAIL=
+BREVO_SENDER_NAME=CPMS Placement Cell
 
 TWILIO_ACCOUNT_SID=
 TWILIO_AUTH_TOKEN=
@@ -57,7 +54,7 @@ TWILIO_FROM_NUMBER=
 Notes:
 - For local MongoDB, you can keep `MONGO_URI=mongodb://127.0.0.1:27017/college_placement`
 - For MongoDB Atlas, replace `MONGO_URI` with your Atlas connection string
-- Email OTP will work when SMTP values are configured
+- Email OTP will work when Brevo API values are configured
 - Phone OTP will work when Twilio values are configured
 
 ## Run the App
@@ -104,9 +101,9 @@ Default local URLs:
 - Passwords are currently stored in plain text. This is not secure and should only be used for demo or college project purposes.
 - JWT is stored in localStorage for simple authentication handling.
 - Real OTP delivery requires external service configuration:
-  - Email OTP: SMTP provider
+  - Email OTP: Brevo transactional email API
   - Phone OTP: Twilio
-- If SMTP or Twilio is not configured, production-style OTP delivery will not work.
+- If Brevo or Twilio is not configured, production-style OTP delivery will not work.
 
 ## Assets
 To change the college background image, replace:
