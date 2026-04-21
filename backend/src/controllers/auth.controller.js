@@ -1,5 +1,6 @@
 const Student = require("../models/Student");
 const Tpo = require("../models/Tpo");
+const PendingSignup = require("../models/PendingSignup");
 const Job = require("../models/Job");
 const Drive = require("../models/Drive");
 const Notice = require("../models/Notice");
@@ -8,7 +9,14 @@ const { ensureUniqueIdentity, normalizeEmail, normalizePhone } = require("../uti
 const { validateStudentSignupInput, validateTpoSignupInput } = require("../utils/authValidation");
 const { normalizePlacementYear, getCurrentPlacementYear } = require("../utils/placementYear");
 const { generateOtp, hashValue, generateVerifiedResetToken } = require("../utils/passwordReset");
-const { sendStudentPasswordResetOtp, sendStudentPasswordResetSmsOtp } = require("../utils/mailer");
+const {
+  sendStudentPasswordResetOtp,
+  sendStudentPasswordResetSmsOtp,
+  sendSignupOtpEmail,
+  sendSignupOtpSms,
+  sendSignupSuccessEmail,
+  sendSignupSuccessSms
+} = require("../utils/mailer");
 
 function sanitizeUser(user) {
   const obj = user.toObject();
@@ -18,22 +26,266 @@ function sanitizeUser(user) {
   return obj;
 }
 
-async function studentSignup(req, res) {
-  const { name, email, password, phone, placementYear } = req.body;
-  validateStudentSignupInput({ name, email, password, phone, placementYear });
+function getSignupVerificationState(record) {
+  return {
+    signupToken: record.signupToken,
+    emailVerified: Boolean(record.emailVerified),
+    phoneVerified: Boolean(record.phoneVerified),
+    readyToComplete: Boolean(record.emailVerified)
+  };
+}
 
-  await ensureUniqueIdentity({ email, phone });
+async function sendSignupOtpByChannel({ channel, record, roleLabel }) {
+  const otp = generateOtp();
+
+  if (channel === "email") {
+    record.emailOtpHash = hashValue(otp);
+    record.emailOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    record.emailVerified = false;
+    await record.save();
+    await sendSignupOtpEmail({
+      toEmail: record.email,
+      recipientName: record.name,
+      otp,
+      roleLabel
+    });
+    return;
+  }
+
+  record.phoneOtpHash = hashValue(otp);
+  record.phoneOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  record.phoneVerified = false;
+  await record.save();
+  await sendSignupOtpSms({
+    toPhone: record.phone,
+    recipientName: record.name,
+    otp,
+    roleLabel
+  });
+}
+
+async function getPendingSignupForVerification({ role, signupToken }) {
+  if (!signupToken) {
+    const err = new Error("Signup session not found. Request OTP again.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const pending = await PendingSignup.findOne({ signupToken, role }).select(
+    "+emailOtpHash +emailOtpExpiresAt +phoneOtpHash +phoneOtpExpiresAt"
+  );
+
+  if (!pending) {
+    const err = new Error("Signup session expired. Request OTP again.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return pending;
+}
+
+async function verifyPendingSignupOtp({ record, channel, otp }) {
+  if (!["email", "phone"].includes(channel) || !otp) {
+    const err = new Error("Valid OTP channel and otp required");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (channel === "email") {
+    if (!record.emailOtpHash || !record.emailOtpExpiresAt) {
+      const err = new Error("Email OTP not requested or already expired");
+      err.statusCode = 400;
+      throw err;
+    }
+    if (record.emailOtpExpiresAt.getTime() < Date.now()) {
+      record.emailOtpHash = undefined;
+      record.emailOtpExpiresAt = undefined;
+      await record.save();
+      const err = new Error("Email OTP expired. Request a new OTP.");
+      err.statusCode = 400;
+      throw err;
+    }
+    if (record.emailOtpHash !== hashValue(otp)) {
+      const err = new Error("Invalid email OTP");
+      err.statusCode = 400;
+      throw err;
+    }
+    record.emailVerified = true;
+    record.emailOtpHash = undefined;
+    record.emailOtpExpiresAt = undefined;
+    await record.save();
+    return;
+  }
+
+  if (!record.phoneOtpHash || !record.phoneOtpExpiresAt) {
+    const err = new Error("Phone OTP not requested or already expired");
+    err.statusCode = 400;
+    throw err;
+  }
+  if (record.phoneOtpExpiresAt.getTime() < Date.now()) {
+    record.phoneOtpHash = undefined;
+    record.phoneOtpExpiresAt = undefined;
+    await record.save();
+    const err = new Error("Phone OTP expired. Request a new OTP.");
+    err.statusCode = 400;
+    throw err;
+  }
+  if (record.phoneOtpHash !== hashValue(otp)) {
+    const err = new Error("Invalid phone OTP");
+    err.statusCode = 400;
+    throw err;
+  }
+  record.phoneVerified = true;
+  record.phoneOtpHash = undefined;
+  record.phoneOtpExpiresAt = undefined;
+  await record.save();
+}
+
+async function notifySignupSuccess({ email, phone, name, roleLabel }) {
+  const tasks = [
+    sendSignupSuccessEmail({ toEmail: email, recipientName: name, roleLabel }),
+    sendSignupSuccessSms({ toPhone: phone, recipientName: name, roleLabel })
+  ];
+
+  const results = await Promise.allSettled(tasks);
+  const warnings = [];
+  if (results[0].status === "rejected") warnings.push("Signup email notification could not be delivered");
+  if (results[1].status === "rejected") warnings.push("Signup phone notification could not be delivered");
+  return warnings;
+}
+
+function buildStudentPendingPayload(body) {
+  return {
+    role: "student",
+    name: String(body.name || "").trim(),
+    email: normalizeEmail(body.email),
+    password: String(body.password || ""),
+    phone: normalizePhone(body.phone),
+    placementYear: normalizePlacementYear(body.placementYear) || getCurrentPlacementYear()
+  };
+}
+
+async function resolveTpoSignupContext({ name, email, password, collegeName, phone, previousPassword }) {
+  validateTpoSignupInput({ name, email, password, collegeName, phone });
+
+  const allTpos = await Tpo.find().sort({ updatedAt: -1, createdAt: -1 });
+  if (!allTpos.length) {
+    await ensureUniqueIdentity({ email, phone });
+    return { matchedTpo: null };
+  }
+
+  const normalizedPreviousPassword = String(previousPassword || "").trim();
+  if (!normalizedPreviousPassword) {
+    const err = new Error("Existing TPO password required to create a new TPO account");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const matchedTpo = allTpos.find((tpo) => String(tpo.password || "").trim() === normalizedPreviousPassword);
+  if (!matchedTpo) {
+    const err = new Error("Previous TPO password did not match");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  await ensureUniqueIdentity({ email, phone, excludeTpoId: matchedTpo._id });
+  return { matchedTpo };
+}
+
+function buildTpoPendingPayload(body) {
+  return {
+    role: "tpo",
+    name: String(body.name || "").trim(),
+    email: normalizeEmail(body.email),
+    password: String(body.password || "").trim(),
+    phone: normalizePhone(body.phone),
+    collegeName: String(body.collegeName || "").trim(),
+    previousPassword: String(body.previousPassword || "").trim()
+  };
+}
+
+async function upsertPendingSignup(payload) {
+  const existing = await PendingSignup.findOne({
+    role: payload.role,
+    email: payload.email,
+    phone: payload.phone
+  }).select("+emailOtpHash +emailOtpExpiresAt +phoneOtpHash +phoneOtpExpiresAt");
+
+  if (existing) {
+    Object.assign(existing, payload);
+    if (!existing.signupToken) {
+      existing.signupToken = generateVerifiedResetToken();
+    }
+    await existing.save();
+    return existing;
+  }
+
+  const created = await PendingSignup.create({
+    ...payload,
+    signupToken: generateVerifiedResetToken()
+  });
+  return PendingSignup.findById(created._id).select("+emailOtpHash +emailOtpExpiresAt +phoneOtpHash +phoneOtpExpiresAt");
+}
+
+async function requestStudentSignupOtp(req, res) {
+  validateStudentSignupInput(req.body);
+  await ensureUniqueIdentity({ email: req.body.email, phone: req.body.phone });
+
+  const pending = await upsertPendingSignup(buildStudentPendingPayload(req.body));
+  await sendSignupOtpByChannel({ channel: "email", record: pending, roleLabel: "Student" });
+
+  return res.json({
+    message: "Signup OTP sent successfully via email",
+    verification: getSignupVerificationState(pending)
+  });
+}
+
+async function verifyStudentSignupOtp(req, res) {
+  const { signupToken, otp } = req.body;
+  const pending = await getPendingSignupForVerification({ role: "student", signupToken });
+  await verifyPendingSignupOtp({ record: pending, channel: "email", otp });
+
+  return res.json({
+    message: "Email OTP verified successfully",
+    verification: getSignupVerificationState(pending)
+  });
+}
+
+async function studentSignup(req, res) {
+  const pending = await getPendingSignupForVerification({ role: "student", signupToken: req.body.signupToken });
+  if (!pending.emailVerified) {
+    return res.status(400).json({
+      message: "Verify email OTP before completing signup",
+      verification: getSignupVerificationState(pending)
+    });
+  }
+
+  await ensureUniqueIdentity({ email: pending.email, phone: pending.phone });
 
   const student = await Student.create({
-    name,
-    email: normalizeEmail(email),
-    password,
-    phone: normalizePhone(phone),
-    placementYear: normalizePlacementYear(placementYear) || getCurrentPlacementYear()
+    name: pending.name,
+    email: pending.email,
+    password: pending.password,
+    phone: pending.phone,
+    placementYear: normalizePlacementYear(pending.placementYear) || getCurrentPlacementYear()
   });
 
+  const warnings = await notifySignupSuccess({
+    email: student.email,
+    phone: student.phone,
+    name: student.name,
+    roleLabel: "Student"
+  });
+
+  await PendingSignup.deleteOne({ _id: pending._id });
+
   const token = signToken({ id: student._id, role: "student" });
-  res.status(201).json({ token, user: sanitizeUser(student) });
+  res.status(201).json({
+    token,
+    user: sanitizeUser(student),
+    message: "Student account created successfully",
+    warnings
+  });
 }
 
 async function studentLogin(req, res) {
@@ -163,59 +415,87 @@ async function resetStudentPasswordWithOtp(req, res) {
 }
 
 async function tpoSignup(req, res) {
-  const { name, email, password, collegeName, phone, previousPassword } = req.body;
-  validateTpoSignupInput({ name, email, password, collegeName, phone });
-
-  const allTpos = await Tpo.find().sort({ updatedAt: -1, createdAt: -1 });
-
-  if (!allTpos.length) {
-    await ensureUniqueIdentity({ email, phone });
-    const tpo = await Tpo.create({
-      name,
-      email: normalizeEmail(email),
-      password,
-      collegeName: collegeName || "",
-      phone: normalizePhone(phone)
+  const pending = await getPendingSignupForVerification({ role: "tpo", signupToken: req.body.signupToken });
+  if (!pending.emailVerified) {
+    return res.status(400).json({
+      message: "Verify email OTP before completing signup",
+      verification: getSignupVerificationState(pending)
     });
-
-    const token = signToken({ id: tpo._id, role: "tpo" });
-    return res.status(201).json({ token, user: sanitizeUser(tpo) });
   }
 
-  const normalizedPreviousPassword = String(previousPassword || "").trim();
-  if (!normalizedPreviousPassword) {
-    return res.status(400).json({ message: "Existing TPO password required to create a new TPO account" });
-  }
+  const { matchedTpo } = await resolveTpoSignupContext(pending);
 
-  const matchedTpo = allTpos.find((tpo) => String(tpo.password || "").trim() === normalizedPreviousPassword);
+  let tpo;
   if (!matchedTpo) {
-    return res.status(401).json({ message: "Previous TPO password did not match" });
+    tpo = await Tpo.create({
+      name: pending.name,
+      email: pending.email,
+      password: pending.password,
+      collegeName: pending.collegeName || "",
+      phone: pending.phone
+    });
+  } else {
+    const allTpos = await Tpo.find().sort({ updatedAt: -1, createdAt: -1 });
+    const otherTpoIds = allTpos
+      .filter((tpoDoc) => String(tpoDoc._id) !== String(matchedTpo._id))
+      .map((tpoDoc) => tpoDoc._id);
+
+    if (otherTpoIds.length) {
+      await Promise.all([
+        Job.updateMany({ createdByTpo: { $in: otherTpoIds } }, { $set: { createdByTpo: matchedTpo._id } }),
+        Drive.updateMany({ createdByTpo: { $in: otherTpoIds } }, { $set: { createdByTpo: matchedTpo._id } }),
+        Notice.updateMany({ createdByTpo: { $in: otherTpoIds } }, { $set: { createdByTpo: matchedTpo._id } }),
+      ]);
+      await Tpo.deleteMany({ _id: { $in: otherTpoIds } });
+    }
+
+    matchedTpo.name = pending.name;
+    matchedTpo.email = pending.email;
+    matchedTpo.password = String(pending.password || "").trim();
+    matchedTpo.collegeName = pending.collegeName || "";
+    matchedTpo.phone = pending.phone;
+    await matchedTpo.save();
+    tpo = matchedTpo;
   }
 
-  await ensureUniqueIdentity({ email, phone, excludeTpoId: matchedTpo._id });
+  const warnings = await notifySignupSuccess({
+    email: tpo.email,
+    phone: tpo.phone,
+    name: tpo.name,
+    roleLabel: "TPO"
+  });
 
-  const otherTpoIds = allTpos
-    .filter((tpo) => String(tpo._id) !== String(matchedTpo._id))
-    .map((tpo) => tpo._id);
+  await PendingSignup.deleteOne({ _id: pending._id });
 
-  if (otherTpoIds.length) {
-    await Promise.all([
-      Job.updateMany({ createdByTpo: { $in: otherTpoIds } }, { $set: { createdByTpo: matchedTpo._id } }),
-      Drive.updateMany({ createdByTpo: { $in: otherTpoIds } }, { $set: { createdByTpo: matchedTpo._id } }),
-      Notice.updateMany({ createdByTpo: { $in: otherTpoIds } }, { $set: { createdByTpo: matchedTpo._id } }),
-    ]);
-    await Tpo.deleteMany({ _id: { $in: otherTpoIds } });
-  }
+  const token = signToken({ id: tpo._id, role: "tpo" });
+  res.status(201).json({
+    token,
+    user: sanitizeUser(tpo),
+    message: "TPO account created successfully",
+    warnings
+  });
+}
 
-  matchedTpo.name = name;
-  matchedTpo.email = normalizeEmail(email);
-  matchedTpo.password = String(password || "").trim();
-  matchedTpo.collegeName = collegeName || "";
-  matchedTpo.phone = normalizePhone(phone);
-  await matchedTpo.save();
+async function requestTpoSignupOtp(req, res) {
+  await resolveTpoSignupContext(req.body);
+  const pending = await upsertPendingSignup(buildTpoPendingPayload(req.body));
+  await sendSignupOtpByChannel({ channel: "email", record: pending, roleLabel: "TPO" });
 
-  const token = signToken({ id: matchedTpo._id, role: "tpo" });
-  res.status(201).json({ token, user: sanitizeUser(matchedTpo) });
+  return res.json({
+    message: "Signup OTP sent successfully via email",
+    verification: getSignupVerificationState(pending)
+  });
+}
+
+async function verifyTpoSignupOtp(req, res) {
+  const { signupToken, otp } = req.body;
+  const pending = await getPendingSignupForVerification({ role: "tpo", signupToken });
+  await verifyPendingSignupOtp({ record: pending, channel: "email", otp });
+
+  return res.json({
+    message: "Email OTP verified successfully",
+    verification: getSignupVerificationState(pending)
+  });
 }
 
 async function tpoLogin(req, res) {
@@ -234,11 +514,15 @@ async function tpoLogin(req, res) {
 }
 
 module.exports = {
+  requestStudentSignupOtp,
+  verifyStudentSignupOtp,
   studentSignup,
   studentLogin,
   studentForgotPassword,
   verifyStudentForgotPasswordOtp,
   resetStudentPasswordWithOtp,
+  requestTpoSignupOtp,
+  verifyTpoSignupOtp,
   tpoSignup,
   tpoLogin
 };

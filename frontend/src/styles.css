@@ -1736,6 +1736,99 @@ body:not(.college-theme) .nav * {
   gap: 10px;
 }
 
+.signup-status-strip{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.signup-status-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #edf4ff;
+  border: 1px solid rgba(24, 77, 203, 0.12);
+  color: #5f6f8f !important;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.signup-status-badge.is-verified{
+  background: #e8fbef;
+  border-color: rgba(38, 160, 93, 0.18);
+  color: #1f7a41 !important;
+}
+
+.signup-verification-grid{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.signup-verification-card{
+  padding: 12px;
+  border-radius: 16px;
+  background: #f8fbff;
+  border: 1px solid rgba(17, 49, 111, 0.08);
+  display: grid;
+  gap: 9px;
+}
+
+.signup-verification-card-single{
+  max-width: 100%;
+}
+
+.signup-verification-head{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.signup-verification-head strong{
+  display: block;
+  color: #12306f;
+  font-size: 13px;
+}
+
+.signup-verification-head p{
+  margin: 3px 0 0;
+  color: #6f7d9a;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.signup-status-dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  box-shadow: 0 0 0 4px rgba(203, 213, 225, 0.22);
+  flex: 0 0 auto;
+  margin-top: 3px;
+}
+
+.signup-status-dot.is-verified{
+  background: #1f9d57;
+  box-shadow: 0 0 0 4px rgba(31, 157, 87, 0.16);
+}
+
+.signup-verify-row{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.signup-mini-btn{
+  min-height: 38px;
+  width: auto;
+  padding-inline: 12px;
+  font-size: 12px;
+}
+
 .student-signup-input{
   min-height: 40px;
   border-radius: 12px;
@@ -1897,6 +1990,10 @@ body:not(.college-theme) .tpo-auth-form .form-error{
   .auth-visual-stats{
     max-width: 100%;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .signup-verification-grid{
+    grid-template-columns: 1fr;
   }
 
   .placement-year-select{
@@ -2513,6 +2610,31 @@ body.dark-theme:not(.college-theme) .input{
   border: 1px solid rgba(148, 163, 184, 0.16) !important;
 }
 
+body.dark-theme:not(.college-theme) .signup-verification-card{
+  background: rgba(15, 23, 42, 0.82) !important;
+  border-color: rgba(148, 163, 184, 0.14) !important;
+}
+
+body.dark-theme:not(.college-theme) .signup-verification-head strong{
+  color: #f8fbff !important;
+}
+
+body.dark-theme:not(.college-theme) .signup-verification-head p{
+  color: #cbd5e1 !important;
+}
+
+body.dark-theme:not(.college-theme) .signup-status-badge{
+  background: rgba(59, 130, 246, 0.14) !important;
+  border-color: rgba(96, 165, 250, 0.18) !important;
+  color: #dbeafe !important;
+}
+
+body.dark-theme:not(.college-theme) .signup-status-badge.is-verified{
+  background: rgba(34, 197, 94, 0.16) !important;
+  border-color: rgba(74, 222, 128, 0.18) !important;
+  color: #bbf7d0 !important;
+}
+
 body.dark-theme:not(.college-theme) .input::placeholder{
   color: #94a3b8 !important;
 }
@@ -2931,6 +3053,14 @@ canvas{
     min-width: 88px;
     padding: 0 10px;
     font-size: 11px;
+  }
+
+  .signup-verify-row{
+    grid-template-columns: 1fr;
+  }
+
+  .signup-mini-btn{
+    width: 100%;
   }
 
   .note-action-cell{

@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
+import { saveAuth } from "../../lib/auth";
 import { validateTpoSignup } from "../../lib/signupValidation";
+
+const EMPTY_VERIFICATION = { signupToken: "", emailVerified: false, phoneVerified: false, readyToComplete: false };
 
 export default function TpoSignup() {
   const nav = useNavigate();
@@ -17,20 +20,79 @@ export default function TpoSignup() {
   const [msg, setMsg] = useState("");
   const [needsPreviousPassword, setNeedsPreviousPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [verification, setVerification] = useState(EMPTY_VERIFICATION);
+  const [otp, setOtp] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [completing, setCompleting] = useState(false);
 
-  useEffect(() => {
-    api.get("/")
-      .catch(() => {});
-  }, []);
+  const resetVerification = () => {
+    setVerification(EMPTY_VERIFICATION);
+    setOtp("");
+  };
 
   const onChange = (k, v) => {
-    setForm((s) => {
-      const nextForm = { ...s, [k]: v };
-      if (submitted) {
-        setErr(validateTpoSignup(nextForm, needsPreviousPassword));
+    const nextForm = { ...form, [k]: v };
+    setForm(nextForm);
+    setMsg("");
+    if (verification.signupToken) {
+      resetVerification();
+    }
+    if (submitted) {
+      setErr(validateTpoSignup(nextForm, needsPreviousPassword));
+    }
+  };
+
+  const sendOtp = async () => {
+    setSubmitted(true);
+    setErr("");
+    setMsg("");
+    const validationError = validateTpoSignup(form, needsPreviousPassword);
+    if (validationError) {
+      setErr(validationError);
+      return;
+    }
+
+    try {
+      setSendingOtp(true);
+      const res = await api.post("/api/auth/tpo/signup/request-otp", form);
+      setVerification(res.data?.verification || EMPTY_VERIFICATION);
+      setMsg(res.data?.message || "OTP sent successfully");
+    } catch (e2) {
+      const message = e2?.response?.data?.message || "Unable to send OTP";
+      if (/Existing TPO password required/i.test(message)) {
+        setNeedsPreviousPassword(true);
       }
-      return nextForm;
-    });
+      setErr(message);
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (!verification.signupToken) {
+      setErr("Send OTP first");
+      return;
+    }
+    if (!String(otp || "").trim()) {
+      setErr("Email OTP is required");
+      return;
+    }
+    try {
+      setErr("");
+      setMsg("");
+      setVerifyingOtp(true);
+      const res = await api.post("/api/auth/tpo/signup/verify-otp", {
+        signupToken: verification.signupToken,
+        otp
+      });
+      setVerification(res.data?.verification || EMPTY_VERIFICATION);
+      setMsg(res.data?.message || "OTP verified successfully");
+    } catch (e2) {
+      setErr(e2?.response?.data?.message || "OTP verification failed");
+    } finally {
+      setVerifyingOtp(false);
+    }
   };
 
   const submit = async (e) => {
@@ -43,32 +105,32 @@ export default function TpoSignup() {
       setErr(validationError);
       return;
     }
+    if (!verification.readyToComplete || !verification.signupToken) {
+      setErr("Verify email OTP before completing signup");
+      return;
+    }
     try {
-      await api.post("/api/auth/tpo/signup", form);
-      setMsg("Account successfully created");
-      setForm({
-        name: "",
-        email: "",
-        password: "",
-        collegeName: "",
-        phone: "",
-        previousPassword: ""
-      });
-      setSubmitted(false);
-      setNeedsPreviousPassword(false);
-      setTimeout(() => nav("/"), 1200);
+      setCompleting(true);
+      const res = await api.post("/api/auth/tpo/signup", { signupToken: verification.signupToken });
+      saveAuth({ token: res.data.token, role: "tpo", user: res.data.user });
+      setMsg(res.data?.warnings?.length
+        ? `Account created. ${res.data.warnings.join(". ")}`
+        : "Account created successfully");
+      setTimeout(() => nav("/tpo/dashboard"), 1200);
     } catch (e2) {
       const message = e2?.response?.data?.message || "Signup failed";
       if (/Existing TPO password required/i.test(message)) {
         setNeedsPreviousPassword(true);
       }
       setErr(message);
+    } finally {
+      setCompleting(false);
     }
   };
 
   return (
     <>
-      {msg ? <div className="success-toast">Account successfully created</div> : null}
+      {msg ? <div className="success-toast">{msg}</div> : null}
       <div className="student-signup-page tpo-auth-page">
         <div className="student-signup-shell tpo-auth-shell">
           <div className="student-signup-visual tpo-auth-visual">
@@ -85,19 +147,19 @@ export default function TpoSignup() {
             </div>
             <div className="student-signup-copy tpo-auth-copy">
               <h2>Lead placements with clarity</h2>
-              <p>Create your TPO account and manage campus hiring with confidence and control.</p>
+              <p>Create the TPO account with verified email access so all placement communication stays reliable.</p>
               <div className="auth-visual-chips">
-                <span>Structured workflow</span>
-                <span>Session tracking</span>
+                <span>Verified email</span>
+                <span>Secure onboarding</span>
               </div>
               <div className="auth-visual-stats">
                 <div className="auth-visual-stat-card">
-                  <strong>Central control</strong>
-                  <small>Manage students, jobs, drives, notices, and placements from one dashboard.</small>
+                  <strong>Trusted access</strong>
+                  <small>Both OTP checks finish before dashboard access is granted.</small>
                 </div>
                 <div className="auth-visual-stat-card">
-                  <strong>Better visibility</strong>
-                  <small>Keep every session organized and every update easy to track.</small>
+                  <strong>Ready to manage</strong>
+                  <small>Students, notices, drives, and placements stay in one verified workspace.</small>
                 </div>
               </div>
             </div>
@@ -106,7 +168,7 @@ export default function TpoSignup() {
           <div className="student-signup-form-card tpo-auth-form-card">
             <div className="student-signup-form-head">
               <h1>TPO Signup</h1>
-              <p>Create the TPO account. Use previous password only while changing TPO.</p>
+              <p>Fill details, verify email and phone OTP, then complete the TPO account.</p>
             </div>
 
             <form onSubmit={submit} className="student-signup-form tpo-auth-form">
@@ -140,11 +202,38 @@ export default function TpoSignup() {
                 <input className="input student-signup-input" type="password" placeholder="Enter previous TPO password" value={form.previousPassword} onChange={(e) => onChange("previousPassword", e.target.value)} />
               </div>
 
+              <div className="signup-status-strip">
+                <span className={`signup-status-badge ${verification.emailVerified ? "is-verified" : ""}`}>
+                  Email {verification.emailVerified ? "Verified" : "Pending"}
+                </span>
+              </div>
+
+              <div className="signup-verification-card signup-verification-card-single">
+                <div className="signup-verification-head">
+                  <div>
+                    <strong>Email Verification</strong>
+                    <p>{verification.emailVerified ? "Verified successfully" : "Send OTP to your email and verify it"}</p>
+                  </div>
+                  <span className={`signup-status-dot ${verification.emailVerified ? "is-verified" : ""}`} />
+                </div>
+                <button className="btn signup-mini-btn" type="button" onClick={sendOtp} disabled={sendingOtp}>
+                  {sendingOtp ? "Sending..." : verification.emailVerified ? "Resend OTP" : "Send OTP"}
+                </button>
+                <div className="signup-verify-row">
+                  <input className="input student-signup-input" type="text" inputMode="numeric" maxLength="6" placeholder="Enter email OTP" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} />
+                  <button className="btn signup-mini-btn" type="button" onClick={verifyOtp} disabled={verifyingOtp || verification.emailVerified}>
+                    {verification.emailVerified ? "Done" : verifyingOtp ? "Checking..." : "Verify"}
+                  </button>
+                </div>
+              </div>
+
               <div className="form-error-slot">
                 {err ? <p className="form-error">{err}</p> : null}
               </div>
 
-              <button className="btn student-signup-submit" type="submit">Signup</button>
+              <button className="btn student-signup-submit" type="submit" disabled={!verification.readyToComplete || completing}>
+                {completing ? "Creating account..." : "Complete Signup"}
+              </button>
               <small className="student-signup-footer">Already have an account? <Link to="/tpo/login">Login</Link></small>
             </form>
           </div>
