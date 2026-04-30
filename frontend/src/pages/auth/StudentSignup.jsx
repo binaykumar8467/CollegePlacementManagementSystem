@@ -46,6 +46,12 @@ export default function StudentSignup() {
     setOtp("");
   };
 
+  const showEmailFieldError = (message = "Enter a valid email address") => {
+    setTouched((s) => ({ ...s, email: true }));
+    setFieldErrors((s) => ({ ...s, email: message }));
+    setErr("");
+  };
+
   const onChange = (k, v) => {
     const nextForm = { ...form, [k]: v };
     setForm(nextForm);
@@ -84,7 +90,12 @@ export default function StudentSignup() {
       setOtpCooldown(OTP_RESEND_COOLDOWN_SECONDS);
       setMsg(res.data?.message || "OTP sent successfully");
     } catch (e2) {
-      setErr(e2?.response?.data?.message || "Unable to send OTP");
+      const message = e2?.response?.data?.message || "Unable to send OTP";
+      if (/email is not valid in to|invalid email|email delivery failed/i.test(message)) {
+        showEmailFieldError();
+        return;
+      }
+      setErr(message);
     } finally {
       setSendingOtp(false);
     }

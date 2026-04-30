@@ -45,6 +45,12 @@ export default function TpoSignup() {
     setOtp("");
   };
 
+  const showEmailFieldError = (message = "Enter a valid email address") => {
+    setTouched((s) => ({ ...s, email: true }));
+    setFieldErrors((s) => ({ ...s, email: message }));
+    setErr("");
+  };
+
   const onChange = (k, v) => {
     const nextForm = { ...form, [k]: v };
     setForm(nextForm);
@@ -85,6 +91,10 @@ export default function TpoSignup() {
       setMsg(res.data?.message || "OTP sent successfully");
     } catch (e2) {
       const message = e2?.response?.data?.message || "Unable to send OTP";
+      if (/email is not valid in to|invalid email|email delivery failed/i.test(message)) {
+        showEmailFieldError();
+        return;
+      }
       if (/Existing TPO password required/i.test(message)) {
         setNeedsPreviousPassword(true);
         setTouched((s) => ({ ...s, previousPassword: true }));
