@@ -1,5 +1,6 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const cors = require("cors");
 const morgan = require("morgan");
 const dotenv = require("dotenv");
@@ -19,13 +20,24 @@ const placementRoutes = require("./src/routes/placement.routes");
 const { notFound, errorHandler } = require("./src/middleware/error.middleware");
 
 const app = express();
+const frontendDistPath = path.join(__dirname, "..", "frontend", "dist");
+const frontendIndexPath = path.join(frontendDistPath, "index.html");
+const hasFrontendBuild = fs.existsSync(frontendIndexPath);
+
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
 app.use(morgan("dev"));
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
+if (hasFrontendBuild) {
+  app.use(express.static(frontendDistPath));
+}
+
 app.get("/", (req, res) => {
-  res.json({ ok: true, name: "College Placement Management API" });
+  if (hasFrontendBuild) {
+    return res.sendFile(frontendIndexPath);
+  }
+  return res.json({ ok: true, name: "College Placement Management API" });
 });
 
 app.use("/api/auth", authRoutes);
@@ -36,6 +48,12 @@ app.use("/api/students", studentRoutes);
 app.use("/api/drives", driveRoutes);
 app.use("/api/interviews", interviewRoutes);
 app.use("/api/placements", placementRoutes);
+
+if (hasFrontendBuild) {
+  app.get(/^\/(?!api|uploads).*/, (req, res) => {
+    res.sendFile(frontendIndexPath);
+  });
+}
 
 app.use(notFound);
 app.use(errorHandler);
