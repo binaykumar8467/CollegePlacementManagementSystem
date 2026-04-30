@@ -4,6 +4,9 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^\d{10}$/;
 const nameRegex = /^[A-Za-z][A-Za-z\s.'-]*$/;
 const rollNoRegex = /^[A-Za-z0-9/-]+$/;
+const passwordLetterRegex = /[A-Za-z]/;
+const passwordNumberRegex = /\d/;
+const passwordSpecialRegex = /[^A-Za-z0-9]/;
 
 function normalizeText(value) {
   return String(value || "").trim();
@@ -40,7 +43,11 @@ export function validateEmailOrPhone(value) {
 export function validatePassword(value) {
   const password = String(value || "");
   if (!password) return "Password is required";
-  if (password.length < 6) return "Password must be at least 6 characters";
+  if (password.length < 8) return "Password must be at least 8 characters";
+  if (password.length > 16) return "Password must be at most 16 characters";
+  if (!passwordLetterRegex.test(password)) return "Password must contain at least one letter";
+  if (!passwordNumberRegex.test(password)) return "Password must contain at least one number";
+  if (!passwordSpecialRegex.test(password)) return "Password must contain at least one special character";
   return "";
 }
 
@@ -108,6 +115,17 @@ export function validateStudentSignup(form) {
   return "";
 }
 
+export function getStudentSignupErrors(form) {
+  const fieldOrder = ["name", "email", "password", "phone", "placementYear"];
+  return fieldOrder.reduce((errors, field) => {
+    const error = validateStudentField(field, form[field]);
+    if (error) {
+      errors[field] = error;
+    }
+    return errors;
+  }, {});
+}
+
 export function validateTpoSignup(form, needsPreviousPassword = false) {
   const requiredFields = ["name", "email", "password", "collegeName", "phone"];
   const allRequiredEmpty = requiredFields.every((field) => !normalizeText(form[field]));
@@ -120,4 +138,15 @@ export function validateTpoSignup(form, needsPreviousPassword = false) {
     if (error) return error;
   }
   return "";
+}
+
+export function getTpoSignupErrors(form, needsPreviousPassword = false) {
+  const fieldOrder = ["name", "email", "password", "collegeName", "phone", "previousPassword"];
+  return fieldOrder.reduce((errors, field) => {
+    const error = validateTpoField(field, form[field], needsPreviousPassword);
+    if (error) {
+      errors[field] = error;
+    }
+    return errors;
+  }, {});
 }

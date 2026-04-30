@@ -2,9 +2,12 @@ import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import { getCurrentPlacementYear, getPlacementYearOptions } from "../../lib/studentOptions";
-import { validateStudentSignup } from "../../lib/signupValidation";
+import { getStudentSignupErrors, validateStudentField, validateStudentSignup } from "../../lib/signupValidation";
 
 const EMPTY_VERIFICATION = { signupToken: "", emailVerified: false, phoneVerified: false, readyToComplete: false };
+const EMPTY_FIELD_ERRORS = { name: "", email: "", password: "", placementYear: "", phone: "" };
+const EMPTY_TOUCHED = { name: false, email: false, password: false, placementYear: false, phone: false };
+const OTP_RESEND_COOLDOWN_SECONDS = 30;
 
 export default function StudentSignup() {
   const nav = useNavigate();
@@ -19,11 +22,24 @@ export default function StudentSignup() {
   });
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
+  const [fieldErrors, setFieldErrors] = useState(EMPTY_FIELD_ERRORS);
+  const [touched, setTouched] = useState(EMPTY_TOUCHED);
   const [verification, setVerification] = useState(EMPTY_VERIFICATION);
   const [otp, setOtp] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+
+  React.useEffect(() => {
+    if (!otpCooldown) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setOtpCooldown((current) => Math.max(current - 1, 0));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [otpCooldown]);
 
   const resetVerification = () => {
     setVerification(EMPTY_VERIFICATION);
@@ -31,28 +47,41 @@ export default function StudentSignup() {
   };
 
   const onChange = (k, v) => {
-    setForm((s) => ({ ...s, [k]: v }));
+    const nextForm = { ...form, [k]: v };
+    setForm(nextForm);
     setMsg("");
+    setTouched((s) => ({ ...s, [k]: true }));
+    setFieldErrors((s) => ({ ...s, [k]: validateStudentField(k, v) }));
     if (verification.signupToken) {
       resetVerification();
     }
     if (err) {
-      setErr(validateStudentSignup({ ...form, [k]: v }));
+      setErr("");
     }
   };
 
+  const onBlur = (k) => {
+    setTouched((s) => ({ ...s, [k]: true }));
+    setFieldErrors((s) => ({ ...s, [k]: validateStudentField(k, form[k]) }));
+  };
+
   const sendOtp = async () => {
+    if (otpCooldown > 0) {
+      return;
+    }
     setErr("");
     setMsg("");
+    setTouched({ name: true, email: true, password: true, placementYear: true, phone: true });
+    setFieldErrors(getStudentSignupErrors(form));
     const validationError = validateStudentSignup(form);
     if (validationError) {
-      setErr(validationError);
       return;
     }
     try {
       setSendingOtp(true);
       const res = await api.post("/api/auth/student/signup/request-otp", form);
       setVerification(res.data?.verification || EMPTY_VERIFICATION);
+      setOtpCooldown(OTP_RESEND_COOLDOWN_SECONDS);
       setMsg(res.data?.message || "OTP sent successfully");
     } catch (e2) {
       setErr(e2?.response?.data?.message || "Unable to send OTP");
@@ -91,9 +120,10 @@ export default function StudentSignup() {
     e.preventDefault();
     setErr("");
     setMsg("");
+    setTouched({ name: true, email: true, password: true, placementYear: true, phone: true });
+    setFieldErrors(getStudentSignupErrors(form));
     const validationError = validateStudentSignup(form);
     if (validationError) {
-      setErr(validationError);
       return;
     }
     if (!verification.readyToComplete || !verification.signupToken) {
@@ -159,31 +189,46 @@ export default function StudentSignup() {
             </div>
 
             <form onSubmit={submit} className="student-signup-form">
-              <div>
+              <div className="field-group">
                 <label>Name</label>
-                <input className="input student-signup-input" placeholder="Enter your full name" value={form.name} onChange={(e) => onChange("name", e.target.value)} />
+                <input className="input student-signup-input" placeholder="Enter your full name" value={form.name} onChange={(e) => onChange("name", e.target.value)} onBlur={() => onBlur("name")} />
+                <div className={`field-error-slot ${touched.name && fieldErrors.name ? "is-visible" : ""}`}>
+                  {touched.name && fieldErrors.name ? <p className="field-error">{fieldErrors.name}</p> : null}
+                </div>
               </div>
 
-              <div>
+              <div className="field-group">
                 <label>Email</label>
-                <input className="input student-signup-input" type="email" placeholder="Enter your email" value={form.email} onChange={(e) => onChange("email", e.target.value)} />
+                <input className="input student-signup-input" type="email" placeholder="Enter your email" value={form.email} onChange={(e) => onChange("email", e.target.value)} onBlur={() => onBlur("email")} />
+                <div className={`field-error-slot ${touched.email && fieldErrors.email ? "is-visible" : ""}`}>
+                  {touched.email && fieldErrors.email ? <p className="field-error">{fieldErrors.email}</p> : null}
+                </div>
               </div>
 
-              <div>
+              <div className="field-group">
                 <label>Phone</label>
-                <input className="input student-signup-input" type="tel" inputMode="numeric" pattern="[0-9]*" placeholder="Enter your phone number" maxLength="10" value={form.phone} onChange={(e) => onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} />
+                <input className="input student-signup-input" type="tel" inputMode="numeric" pattern="[0-9]*" placeholder="Enter your phone number" maxLength="10" value={form.phone} onChange={(e) => onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} onBlur={() => onBlur("phone")} />
+                <div className={`field-error-slot ${touched.phone && fieldErrors.phone ? "is-visible" : ""}`}>
+                  {touched.phone && fieldErrors.phone ? <p className="field-error">{fieldErrors.phone}</p> : null}
+                </div>
               </div>
 
-              <div>
+              <div className="field-group">
                 <label>Password</label>
-                <input className="input student-signup-input" type="password" placeholder="Create password" minLength="6" value={form.password} onChange={(e) => onChange("password", e.target.value)} />
+                <input className="input student-signup-input" type="password" placeholder="Create password" minLength="8" maxLength="16" value={form.password} onChange={(e) => onChange("password", e.target.value)} onBlur={() => onBlur("password")} />
+                <div className={`field-error-slot ${touched.password && fieldErrors.password ? "is-visible" : ""}`}>
+                  {touched.password && fieldErrors.password ? <p className="field-error">{fieldErrors.password}</p> : null}
+                </div>
               </div>
 
-              <div>
+              <div className="field-group">
                 <label>Session</label>
-                <select className="input student-signup-input placement-year-select" value={form.placementYear} onChange={(e) => onChange("placementYear", e.target.value)}>
+                <select className="input student-signup-input placement-year-select" value={form.placementYear} onChange={(e) => onChange("placementYear", e.target.value)} onBlur={() => onBlur("placementYear")}>
                   {placementYears.map((year) => <option key={year} value={year}>{year}</option>)}
                 </select>
+                <div className={`field-error-slot ${touched.placementYear && fieldErrors.placementYear ? "is-visible" : ""}`}>
+                  {touched.placementYear && fieldErrors.placementYear ? <p className="field-error">{fieldErrors.placementYear}</p> : null}
+                </div>
               </div>
 
               <div className="signup-status-strip">
@@ -200,8 +245,14 @@ export default function StudentSignup() {
                   </div>
                   <span className={`signup-status-dot ${verification.emailVerified ? "is-verified" : ""}`} />
                 </div>
-                <button className="btn signup-mini-btn" type="button" onClick={sendOtp} disabled={sendingOtp}>
-                  {sendingOtp ? "Sending..." : verification.emailVerified ? "Resend OTP" : "Send OTP"}
+                <button className="btn signup-mini-btn" type="button" onClick={sendOtp} disabled={sendingOtp || otpCooldown > 0}>
+                  {sendingOtp
+                    ? "Sending..."
+                    : otpCooldown > 0
+                      ? `Resend in ${otpCooldown}s`
+                      : verification.signupToken || verification.emailVerified
+                        ? "Resend OTP"
+                        : "Send OTP"}
                 </button>
                 <div className="signup-verify-row">
                   <input className="input student-signup-input" type="text" inputMode="numeric" maxLength="6" placeholder="Enter email OTP" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} />

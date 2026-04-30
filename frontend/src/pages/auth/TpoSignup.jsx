@@ -1,9 +1,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
-import { validateTpoSignup } from "../../lib/signupValidation";
+import { getTpoSignupErrors, validateTpoField, validateTpoSignup } from "../../lib/signupValidation";
 
 const EMPTY_VERIFICATION = { signupToken: "", emailVerified: false, phoneVerified: false, readyToComplete: false };
+const EMPTY_FIELD_ERRORS = { name: "", email: "", password: "", collegeName: "", phone: "", previousPassword: "" };
+const EMPTY_TOUCHED = { name: false, email: false, password: false, collegeName: false, phone: false, previousPassword: false };
+const OTP_RESEND_COOLDOWN_SECONDS = 30;
 
 export default function TpoSignup() {
   const nav = useNavigate();
@@ -17,13 +20,25 @@ export default function TpoSignup() {
   });
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
+  const [fieldErrors, setFieldErrors] = useState(EMPTY_FIELD_ERRORS);
+  const [touched, setTouched] = useState(EMPTY_TOUCHED);
   const [needsPreviousPassword, setNeedsPreviousPassword] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [verification, setVerification] = useState(EMPTY_VERIFICATION);
   const [otp, setOtp] = useState("");
   const [sendingOtp, setSendingOtp] = useState(false);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [otpCooldown, setOtpCooldown] = useState(0);
+
+  React.useEffect(() => {
+    if (!otpCooldown) return undefined;
+
+    const timer = window.setTimeout(() => {
+      setOtpCooldown((current) => Math.max(current - 1, 0));
+    }, 1000);
+
+    return () => window.clearTimeout(timer);
+  }, [otpCooldown]);
 
   const resetVerification = () => {
     setVerification(EMPTY_VERIFICATION);
@@ -34,21 +49,31 @@ export default function TpoSignup() {
     const nextForm = { ...form, [k]: v };
     setForm(nextForm);
     setMsg("");
+    setTouched((s) => ({ ...s, [k]: true }));
+    setFieldErrors((s) => ({ ...s, [k]: validateTpoField(k, v, needsPreviousPassword) }));
     if (verification.signupToken) {
       resetVerification();
     }
-    if (submitted) {
-      setErr(validateTpoSignup(nextForm, needsPreviousPassword));
+    if (err) {
+      setErr("");
     }
   };
 
+  const onBlur = (k) => {
+    setTouched((s) => ({ ...s, [k]: true }));
+    setFieldErrors((s) => ({ ...s, [k]: validateTpoField(k, form[k], needsPreviousPassword) }));
+  };
+
   const sendOtp = async () => {
-    setSubmitted(true);
+    if (otpCooldown > 0) {
+      return;
+    }
     setErr("");
     setMsg("");
+    setTouched({ name: true, email: true, password: true, collegeName: true, phone: true, previousPassword: true });
+    setFieldErrors(getTpoSignupErrors(form, needsPreviousPassword));
     const validationError = validateTpoSignup(form, needsPreviousPassword);
     if (validationError) {
-      setErr(validationError);
       return;
     }
 
@@ -56,11 +81,14 @@ export default function TpoSignup() {
       setSendingOtp(true);
       const res = await api.post("/api/auth/tpo/signup/request-otp", form);
       setVerification(res.data?.verification || EMPTY_VERIFICATION);
+      setOtpCooldown(OTP_RESEND_COOLDOWN_SECONDS);
       setMsg(res.data?.message || "OTP sent successfully");
     } catch (e2) {
       const message = e2?.response?.data?.message || "Unable to send OTP";
       if (/Existing TPO password required/i.test(message)) {
         setNeedsPreviousPassword(true);
+        setTouched((s) => ({ ...s, previousPassword: true }));
+        setFieldErrors((s) => ({ ...s, previousPassword: validateTpoField("previousPassword", form.previousPassword, true) }));
       }
       setErr(message);
     } finally {
@@ -96,12 +124,12 @@ export default function TpoSignup() {
 
   const submit = async (e) => {
     e.preventDefault();
-    setSubmitted(true);
     setErr("");
     setMsg("");
+    setTouched({ name: true, email: true, password: true, collegeName: true, phone: true, previousPassword: true });
+    setFieldErrors(getTpoSignupErrors(form, needsPreviousPassword));
     const validationError = validateTpoSignup(form, needsPreviousPassword);
     if (validationError) {
-      setErr(validationError);
       return;
     }
     if (!verification.readyToComplete || !verification.signupToken) {
@@ -119,6 +147,8 @@ export default function TpoSignup() {
       const message = e2?.response?.data?.message || "Signup failed";
       if (/Existing TPO password required/i.test(message)) {
         setNeedsPreviousPassword(true);
+        setTouched((s) => ({ ...s, previousPassword: true }));
+        setFieldErrors((s) => ({ ...s, previousPassword: validateTpoField("previousPassword", form.previousPassword, true) }));
       }
       setErr(message);
     } finally {
@@ -170,34 +200,52 @@ export default function TpoSignup() {
             </div>
 
             <form onSubmit={submit} className="student-signup-form tpo-auth-form">
-              <div>
+              <div className="field-group">
                 <label>Name</label>
-                <input className="input student-signup-input" placeholder="Enter your full name" value={form.name} onChange={(e) => onChange("name", e.target.value)} />
+                <input className="input student-signup-input" placeholder="Enter your full name" value={form.name} onChange={(e) => onChange("name", e.target.value)} onBlur={() => onBlur("name")} />
+                <div className={`field-error-slot ${touched.name && fieldErrors.name ? "is-visible" : ""}`}>
+                  {touched.name && fieldErrors.name ? <p className="field-error">{fieldErrors.name}</p> : null}
+                </div>
               </div>
 
-              <div>
+              <div className="field-group">
                 <label>Email</label>
-                <input className="input student-signup-input" type="email" placeholder="Enter your email" value={form.email} onChange={(e) => onChange("email", e.target.value)} />
+                <input className="input student-signup-input" type="email" placeholder="Enter your email" value={form.email} onChange={(e) => onChange("email", e.target.value)} onBlur={() => onBlur("email")} />
+                <div className={`field-error-slot ${touched.email && fieldErrors.email ? "is-visible" : ""}`}>
+                  {touched.email && fieldErrors.email ? <p className="field-error">{fieldErrors.email}</p> : null}
+                </div>
               </div>
 
-              <div>
+              <div className="field-group">
                 <label>Phone</label>
-                <input className="input student-signup-input" type="tel" inputMode="numeric" pattern="[0-9]*" placeholder="Enter your phone number" maxLength="10" value={form.phone} onChange={(e) => onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} />
+                <input className="input student-signup-input" type="tel" inputMode="numeric" pattern="[0-9]*" placeholder="Enter your phone number" maxLength="10" value={form.phone} onChange={(e) => onChange("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} onBlur={() => onBlur("phone")} />
+                <div className={`field-error-slot ${touched.phone && fieldErrors.phone ? "is-visible" : ""}`}>
+                  {touched.phone && fieldErrors.phone ? <p className="field-error">{fieldErrors.phone}</p> : null}
+                </div>
               </div>
 
-              <div>
+              <div className="field-group">
                 <label>Password</label>
-                <input className="input student-signup-input" type="password" placeholder="Create password" minLength="6" value={form.password} onChange={(e) => onChange("password", e.target.value)} />
+                <input className="input student-signup-input" type="password" placeholder="Create password" minLength="8" maxLength="16" value={form.password} onChange={(e) => onChange("password", e.target.value)} onBlur={() => onBlur("password")} />
+                <div className={`field-error-slot ${touched.password && fieldErrors.password ? "is-visible" : ""}`}>
+                  {touched.password && fieldErrors.password ? <p className="field-error">{fieldErrors.password}</p> : null}
+                </div>
               </div>
 
-              <div>
+              <div className="field-group">
                 <label>College Name</label>
-                <input className="input student-signup-input" placeholder="Enter your college name" value={form.collegeName} onChange={(e) => onChange("collegeName", e.target.value)} />
+                <input className="input student-signup-input" placeholder="Enter your college name" value={form.collegeName} onChange={(e) => onChange("collegeName", e.target.value)} onBlur={() => onBlur("collegeName")} />
+                <div className={`field-error-slot ${touched.collegeName && fieldErrors.collegeName ? "is-visible" : ""}`}>
+                  {touched.collegeName && fieldErrors.collegeName ? <p className="field-error">{fieldErrors.collegeName}</p> : null}
+                </div>
               </div>
 
-              <div>
+              <div className="field-group">
                 <label>Previous TPO Password {needsPreviousPassword ? "(required)" : "(only when changing TPO)"}</label>
-                <input className="input student-signup-input" type="password" placeholder="Enter previous TPO password" value={form.previousPassword} onChange={(e) => onChange("previousPassword", e.target.value)} />
+                <input className="input student-signup-input" type="password" placeholder="Enter previous TPO password" value={form.previousPassword} onChange={(e) => onChange("previousPassword", e.target.value)} onBlur={() => onBlur("previousPassword")} />
+                <div className={`field-error-slot ${touched.previousPassword && fieldErrors.previousPassword ? "is-visible" : ""}`}>
+                  {touched.previousPassword && fieldErrors.previousPassword ? <p className="field-error">{fieldErrors.previousPassword}</p> : null}
+                </div>
               </div>
 
               <div className="signup-status-strip">
@@ -214,8 +262,14 @@ export default function TpoSignup() {
                   </div>
                   <span className={`signup-status-dot ${verification.emailVerified ? "is-verified" : ""}`} />
                 </div>
-                <button className="btn signup-mini-btn" type="button" onClick={sendOtp} disabled={sendingOtp}>
-                  {sendingOtp ? "Sending..." : verification.emailVerified ? "Resend OTP" : "Send OTP"}
+                <button className="btn signup-mini-btn" type="button" onClick={sendOtp} disabled={sendingOtp || otpCooldown > 0}>
+                  {sendingOtp
+                    ? "Sending..."
+                    : otpCooldown > 0
+                      ? `Resend in ${otpCooldown}s`
+                      : verification.signupToken || verification.emailVerified
+                        ? "Resend OTP"
+                        : "Send OTP"}
                 </button>
                 <div className="signup-verify-row">
                   <input className="input student-signup-input" type="text" inputMode="numeric" maxLength="6" placeholder="Enter email OTP" value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} />
