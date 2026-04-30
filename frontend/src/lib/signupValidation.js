@@ -1,6 +1,6 @@
 import { getPlacementYearOptions } from "./studentOptions";
 
-const emailRegex = /^[^\s@]+@[^\s@]+\.com$/i;
+const emailRegex = /^[A-Za-z0-9._%+-]+@gmail\.com$/i;
 const phoneRegex = /^\d{10}$/;
 const nameRegex = /^[A-Za-z][A-Za-z\s.'-]*$/;
 const rollNoRegex = /^[A-Za-z0-9/-]+$/;
