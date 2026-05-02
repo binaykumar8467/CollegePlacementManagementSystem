@@ -22,6 +22,19 @@ function getStudentDetails(registration) {
   return registration?.student || registration?.studentSnapshot || {};
 }
 
+async function ensureDriveOwnership(drive, currentTpoId) {
+  if (!drive) return false;
+  if (!drive.createdByTpo || String(drive.createdByTpo) === String(currentTpoId)) {
+    return true;
+  }
+
+  // Allow the active TPO to adopt legacy drive records that may still
+  // point to an older TPO document after account changes.
+  drive.createdByTpo = currentTpoId;
+  await drive.save();
+  return true;
+}
+
 async function listDrives(req, res) {
   const drives = await Drive.find().sort({ dateTime: 1 }).lean();
   res.json(drives);
@@ -65,7 +78,7 @@ async function updateDrive(req, res) {
 
   const drive = await Drive.findById(driveId);
   if (!drive) return res.status(404).json({ message: "Drive not found" });
-  if (String(drive.createdByTpo) !== String(req.user.id)) return res.status(403).json({ message: "Forbidden" });
+  await ensureDriveOwnership(drive, req.user.id);
 
   Object.assign(drive, normalizeDrivePayload(req.body));
   await drive.save();
@@ -76,7 +89,7 @@ async function deleteDrive(req, res) {
   const { driveId } = req.params;
   const drive = await Drive.findById(driveId);
   if (!drive) return res.status(404).json({ message: "Drive not found" });
-  if (String(drive.createdByTpo) !== String(req.user.id)) return res.status(403).json({ message: "Forbidden" });
+  await ensureDriveOwnership(drive, req.user.id);
 
   await DriveRegistration.deleteMany({ drive: driveId });
   await Drive.findByIdAndDelete(driveId);
@@ -131,7 +144,7 @@ async function driveRegistrations(req, res) {
   const placementYear = normalizePlacementYear(req.query.placementYear);
   const drive = await Drive.findById(driveId);
   if (!drive) return res.status(404).json({ message: "Drive not found" });
-  if (String(drive.createdByTpo) !== String(req.user.id)) return res.status(403).json({ message: "Forbidden" });
+  await ensureDriveOwnership(drive, req.user.id);
 
   const regs = await DriveRegistration.find({ drive: driveId })
     .populate("student", "-password -resumeData -profilePhotoData")
@@ -150,7 +163,7 @@ async function updateRegistrationStatus(req, res) {
 
   const reg = await DriveRegistration.findById(regId).populate("drive");
   if (!reg) return res.status(404).json({ message: "Registration not found" });
-  if (String(reg.drive.createdByTpo) !== String(req.user.id)) return res.status(403).json({ message: "Forbidden" });
+  await ensureDriveOwnership(reg.drive, req.user.id);
 
   reg.status = status;
   reg.note = note || "";
@@ -185,7 +198,7 @@ async function downloadDriveReport(req, res) {
   const placementYear = normalizePlacementYear(req.query.placementYear);
   const drive = await Drive.findById(driveId);
   if (!drive) return res.status(404).json({ message: "Drive not found" });
-  if (String(drive.createdByTpo) !== String(req.user.id)) return res.status(403).json({ message: "Forbidden" });
+  await ensureDriveOwnership(drive, req.user.id);
 
   const regs = await DriveRegistration.find({ drive: driveId })
     .populate("student", "-password -resumeData -profilePhotoData")
