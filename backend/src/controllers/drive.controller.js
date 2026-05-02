@@ -4,6 +4,7 @@ const Placement = require("../models/Placement");
 const Student = require("../models/Student");
 const { normalizePlacementYear } = require("../utils/placementYear");
 const { buildStudentSnapshot } = require("../utils/studentSnapshot");
+const { isStudentProfileComplete, matchesEligibleCourse } = require("../utils/studentEligibility");
 
 function excelCsv(csvBody) {
   const bom = "\ufeff";
@@ -101,11 +102,14 @@ async function registerForDrive(req, res) {
   const student = await Student.findById(req.user.id);
   if (!student) return res.status(404).json({ message: "Student not found" });
   if (!student.isApproved) return res.status(403).json({ message: "Not approved for placements yet. Contact TPO." });
+  if (!isStudentProfileComplete(student)) {
+    return res.status(403).json({ message: "Complete your profile with roll number, course, year, phone, and marks before registering for drives." });
+  }
 
   const drive = await Drive.findById(driveId);
   if (!drive) return res.status(404).json({ message: "Drive not found" });
 
-  if (!student.department || (drive.eligibleDepartments?.length && !drive.eligibleDepartments.includes(student.department))) {
+  if (!matchesEligibleCourse(student.department, drive.eligibleDepartments || [])) {
     return res.status(403).json({ message: "You are not eligible. Course does not match." });
   }
 

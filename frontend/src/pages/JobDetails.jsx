@@ -4,6 +4,38 @@ import api from "../lib/api";
 import { getRole, getUser } from "../lib/auth";
 import BackButton from "../components/BackButton";
 
+function normalizeCourseValue(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function parseEligibilityCourses(rawEligibility) {
+  return String(rawEligibility || "")
+    .split(/[,/\n|]+/)
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+}
+
+function isProfileComplete(user) {
+  if (!user) return false;
+  const hasBasicDetails = Boolean(
+    String(user.rollNo || "").trim() &&
+    String(user.department || "").trim() &&
+    String(user.year || "").trim() &&
+    String(user.phone || "").trim()
+  );
+  if (!hasBasicDetails) return false;
+  if (user.gradingSystem === "cgpa") return Number.isFinite(Number(user.cgpa));
+  if (user.gradingSystem === "percentage") return Number.isFinite(Number(user.percentage));
+  return false;
+}
+
+function matchesEligibleCourse(studentCourse, rawEligibility) {
+  const eligibleCourses = parseEligibilityCourses(rawEligibility);
+  if (!eligibleCourses.length) return true;
+  const normalizedStudentCourse = normalizeCourseValue(studentCourse);
+  return eligibleCourses.map(normalizeCourseValue).includes(normalizedStudentCourse);
+}
+
 export default function JobDetails() {
   const { jobId } = useParams();
   const nav = useNavigate();
@@ -57,6 +89,9 @@ export default function JobDetails() {
 
   const deadlinePassed = new Date(job.deadline).getTime() < Date.now();
   const approved = Boolean(user?.isApproved);
+  const profileComplete = isProfileComplete(user);
+  const courseMatched = matchesEligibleCourse(user?.department, job.eligibility);
+  const canApply = approved && profileComplete && courseMatched && !deadlinePassed;
 
   return (
     <div className="container">
@@ -91,9 +126,11 @@ export default function JobDetails() {
         {role === "student" ? (
           <>
             {!approved ? <small className="muted">You are not approved by TPO. You cannot apply.</small> : null}
+            {approved && !profileComplete ? <small className="muted">Complete your profile with roll number, course, year, phone, and marks before applying.</small> : null}
+            {approved && profileComplete && !courseMatched ? <small className="muted">You cannot apply because your course does not match the job eligibility.</small> : null}
             <div style={{ height: 8 }} />
-            <button className="btn" onClick={apply} disabled={deadlinePassed || !approved}>
-              {deadlinePassed ? "Deadline Passed" : (!approved ? "Not Approved" : "Apply")}
+            <button className="btn" onClick={apply} disabled={!canApply}>
+              {deadlinePassed ? "Deadline Passed" : (!approved ? "Not Approved" : (!profileComplete ? "Complete Profile First" : (!courseMatched ? "Course Not Eligible" : "Apply")))}
             </button>
           </>
         ) : role === "tpo" ? (

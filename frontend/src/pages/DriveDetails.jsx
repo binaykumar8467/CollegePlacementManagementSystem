@@ -1,14 +1,39 @@
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../lib/api";
-import { getRole } from "../lib/auth";
+import { getRole, getUser } from "../lib/auth";
 import BackButton from "../components/BackButton";
+
+function normalizeCourseValue(value) {
+  return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function isProfileComplete(user) {
+  if (!user) return false;
+  const hasBasicDetails = Boolean(
+    String(user.rollNo || "").trim() &&
+    String(user.department || "").trim() &&
+    String(user.year || "").trim() &&
+    String(user.phone || "").trim()
+  );
+  if (!hasBasicDetails) return false;
+  if (user.gradingSystem === "cgpa") return Number.isFinite(Number(user.cgpa));
+  if (user.gradingSystem === "percentage") return Number.isFinite(Number(user.percentage));
+  return false;
+}
+
+function matchesEligibleCourse(studentCourse, eligibleCourses) {
+  if (!Array.isArray(eligibleCourses) || !eligibleCourses.length) return true;
+  const normalizedStudentCourse = normalizeCourseValue(studentCourse);
+  return eligibleCourses.map(normalizeCourseValue).includes(normalizedStudentCourse);
+}
 
 export default function DriveDetails() {
   const { driveId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const role = getRole();
+  const user = getUser();
   const [drive, setDrive] = useState(null);
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
@@ -52,6 +77,11 @@ export default function DriveDetails() {
     );
   }
 
+  const approved = Boolean(user?.isApproved);
+  const profileComplete = isProfileComplete(user);
+  const courseMatched = matchesEligibleCourse(user?.department, drive.eligibleDepartments || []);
+  const canRegister = approved && profileComplete && courseMatched;
+
   return (
     <div className="container">
       <div className="card">
@@ -82,7 +112,15 @@ export default function DriveDetails() {
         {err ? <p style={{ color:"#b00020" }}>{err}</p> : null}
 
         {role === "student" ? (
-          <button className="btn" onClick={register}>Register</button>
+          <>
+            {!approved ? <small className="muted">You are not approved by TPO. You cannot register.</small> : null}
+            {approved && !profileComplete ? <small className="muted">Complete your profile with roll number, course, year, phone, and marks before registering.</small> : null}
+            {approved && profileComplete && !courseMatched ? <small className="muted">You cannot register because your course does not match the drive eligibility.</small> : null}
+            <div style={{ height: 8 }} />
+            <button className="btn" onClick={register} disabled={!canRegister}>
+              {!approved ? "Not Approved" : (!profileComplete ? "Complete Profile First" : (!courseMatched ? "Course Not Eligible" : "Register"))}
+            </button>
+          </>
         ) : role === "tpo" ? (
           <div className="row" style={{ gap: 8, flexWrap: "wrap" }}>
             <Link className="btn" to={`/tpo/drives/${driveId}/registrations`} state={{ from: location.pathname }}>Registrations</Link>

@@ -5,6 +5,7 @@ const Placement = require("../models/Placement");
 const Interview = require("../models/Interview");
 const { normalizePlacementYear } = require("../utils/placementYear");
 const { buildStudentSnapshot } = require("../utils/studentSnapshot");
+const { parseEligibilityCourses, isStudentProfileComplete, matchesEligibleCourse } = require("../utils/studentEligibility");
 
 function excelCsv(csvBody) {
   // Excel-friendly CSV: UTF-8 BOM + "sep=," directive + CRLF line endings
@@ -50,12 +51,20 @@ async function applyToJob(req, res) {
   if (!student.isApproved) {
     return res.status(403).json({ message: "Not approved for placements yet. Contact TPO." });
   }
+  if (!isStudentProfileComplete(student)) {
+    return res.status(403).json({ message: "Complete your profile with roll number, course, year, phone, and marks before applying." });
+  }
 
   const job = await Job.findById(jobId);
   if (!job) return res.status(404).json({ message: "Job not found" });
 
   if (new Date(job.deadline).getTime() < Date.now()) {
     return res.status(400).json({ message: "Deadline passed" });
+  }
+
+  const eligibleCourses = parseEligibilityCourses(job.eligibility);
+  if (!matchesEligibleCourse(student.department, eligibleCourses)) {
+    return res.status(403).json({ message: "You cannot apply. Your course does not match the job eligibility." });
   }
 
   try {
