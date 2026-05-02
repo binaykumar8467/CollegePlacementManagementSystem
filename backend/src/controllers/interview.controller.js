@@ -4,6 +4,17 @@ const Drive = require("../models/Drive");
 const DriveRegistration = require("../models/DriveRegistration");
 const Job = require("../models/Job");
 
+async function ensureJobOwnership(job, currentTpoId) {
+  if (!job) return false;
+  if (!job.createdByTpo || String(job.createdByTpo) === String(currentTpoId)) {
+    return true;
+  }
+
+  job.createdByTpo = currentTpoId;
+  await job.save();
+  return true;
+}
+
 async function createInterview(req, res) {
   const { applicationId } = req.params;
   const { round, dateTime, location, mode, note } = req.body;
@@ -11,8 +22,7 @@ async function createInterview(req, res) {
 
   const app = await Application.findById(applicationId).populate("job");
   if (!app) return res.status(404).json({ message: "Application not found" });
-
-  if (String(app.job.createdByTpo) !== String(req.user.id)) return res.status(403).json({ message: "Forbidden" });
+  await ensureJobOwnership(app.job, req.user.id);
 
   const interview = await Interview.findOneAndUpdate(
     { application: applicationId },
@@ -83,7 +93,7 @@ async function listJobInterviews(req, res) {
   const { jobId } = req.params;
   const job = await Job.findById(jobId);
   if (!job) return res.status(404).json({ message: "Job not found" });
-  if (String(job.createdByTpo) !== String(req.user.id)) return res.status(403).json({ message: "Forbidden" });
+  await ensureJobOwnership(job, req.user.id);
 
   const apps = await Application.find({ job: jobId }).select("_id");
   const ids = apps.map(a => a._id);

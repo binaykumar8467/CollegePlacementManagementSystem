@@ -30,6 +30,17 @@ function getStudentDetails(application) {
   return application?.student || application?.studentSnapshot || {};
 }
 
+async function ensureJobOwnership(job, currentTpoId) {
+  if (!job) return false;
+  if (!job.createdByTpo || String(job.createdByTpo) === String(currentTpoId)) {
+    return true;
+  }
+
+  job.createdByTpo = currentTpoId;
+  await job.save();
+  return true;
+}
+
 async function applyToJob(req, res) {
   const { jobId } = req.params;
 
@@ -72,6 +83,9 @@ async function myApplications(req, res) {
 async function applicationsForJob(req, res) {
   const { jobId } = req.params;
   const placementYear = normalizePlacementYear(req.query.placementYear);
+  const job = await Job.findById(jobId);
+  if (!job) return res.status(404).json({ message: "Job not found" });
+  await ensureJobOwnership(job, req.user.id);
 
   const apps = await Application.find({ job: jobId })
     .populate("student", "-password")
@@ -92,10 +106,7 @@ async function updateApplicationStatus(req, res) {
 
   const app = await Application.findById(applicationId).populate("job");
   if (!app) return res.status(404).json({ message: "Application not found" });
-
-  if (String(app.job.createdByTpo) !== String(req.user.id)) {
-    return res.status(403).json({ message: "Forbidden" });
-  }
+  await ensureJobOwnership(app.job, req.user.id);
 
   app.status = status;
   app.note = note || "";
@@ -133,10 +144,7 @@ async function downloadApplicantsReport(req, res) {
 
   const job = await Job.findById(jobId);
   if (!job) return res.status(404).json({ message: "Job not found" });
-
-  if (String(job.createdByTpo) !== String(req.user.id)) {
-    return res.status(403).json({ message: "Forbidden" });
-  }
+  await ensureJobOwnership(job, req.user.id);
 
   const apps = await Application.find({ job: jobId })
     .populate("student", "-password")

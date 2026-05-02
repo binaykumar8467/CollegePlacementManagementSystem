@@ -2,6 +2,19 @@ const Job = require("../models/Job");
 const Application = require("../models/Application");
 const Interview = require("../models/Interview");
 
+async function ensureJobOwnership(job, currentTpoId) {
+  if (!job) return false;
+  if (!job.createdByTpo || String(job.createdByTpo) === String(currentTpoId)) {
+    return true;
+  }
+
+  // Allow the active TPO to adopt legacy job records that may still
+  // point to an older TPO document after account updates.
+  job.createdByTpo = currentTpoId;
+  await job.save();
+  return true;
+}
+
 function excelCsv(csvBody) {
   return "\ufeffsep=,\r\n" + String(csvBody).replace(/\r?\n/g, "\r\n");
 }
@@ -45,7 +58,7 @@ async function updateJob(req, res) {
 
   const job = await Job.findById(jobId);
   if (!job) return res.status(404).json({ message: "Job not found" });
-  if (String(job.createdByTpo) !== String(req.user.id)) return res.status(403).json({ message: "Forbidden" });
+  await ensureJobOwnership(job, req.user.id);
 
   job.title = title;
   job.company = company;
@@ -63,7 +76,7 @@ async function deleteJob(req, res) {
   const { jobId } = req.params;
   const job = await Job.findById(jobId);
   if (!job) return res.status(404).json({ message: "Job not found" });
-  if (String(job.createdByTpo) !== String(req.user.id)) return res.status(403).json({ message: "Forbidden" });
+  await ensureJobOwnership(job, req.user.id);
 
   const applications = await Application.find({ job: jobId }).select("_id");
   const applicationIds = applications.map(x => x._id);
