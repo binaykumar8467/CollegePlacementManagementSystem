@@ -15,7 +15,7 @@ export default function Students() {
   const [branchFilter, setBranchFilter] = useState("");
   const [selectedIds, setSelectedIds] = useState([]);
 
-// Load  data needed by this screen.
+  // Load data needed by this screen.
   const load = () => {
     setErr("");
     setMsg("");
@@ -40,7 +40,7 @@ export default function Students() {
 
   const allVisibleSelected = filteredStudents.length > 0 && filteredStudents.every((student) => selectedIds.includes(student._id));
 
-// Convert this value into the format expected by the UI or API.
+  // Convert this value into the format expected by the UI or API.
   const toggle = async (studentId, current) => {
     setErr("");
     setMsg("");
@@ -53,7 +53,7 @@ export default function Students() {
     }
   };
 
-// Handle the view resume logic used in this file.
+  // Handle the view resume logic used in this file.
   const viewResume = async (studentId) => {
     setErr("");
     try {
@@ -66,7 +66,7 @@ export default function Students() {
     }
   };
 
-// Open  photo content for the current user.
+  // Open photo content for the current user.
   const openPhoto = async (studentId) => {
     setErr("");
     try {
@@ -80,7 +80,7 @@ export default function Students() {
     }
   };
 
-// Prepare and download  photo data as a report.
+  // Prepare and download photo data as a report.
   const downloadPhoto = async (studentId, name) => {
     try {
       const res = await api.get(`/api/students/${studentId}/photo`, { responseType: "blob" });
@@ -100,7 +100,7 @@ export default function Students() {
     }
   };
 
-// Handle the remove student logic used in this file.
+  // Handle the remove student logic used in this file.
   const removeStudent = async (studentId, studentName) => {
     const ok = window.confirm(`Remove ${studentName} from the student list?`);
     if (!ok) return;
@@ -115,7 +115,7 @@ export default function Students() {
     }
   };
 
-// Convert this value into the format expected by the UI or API.
+  // Convert this value into the format expected by the UI or API.
   const toggleSelected = (studentId) => {
     setSelectedIds((current) => (
       current.includes(studentId)
@@ -124,7 +124,7 @@ export default function Students() {
     ));
   };
 
-// Convert this value into the format expected by the UI or API.
+  // Convert this value into the format expected by the UI or API.
   const toggleSelectAllVisible = () => {
     if (allVisibleSelected) {
       setSelectedIds((current) => current.filter((id) => !filteredStudents.some((student) => student._id === id)));
@@ -133,12 +133,12 @@ export default function Students() {
     setSelectedIds((current) => Array.from(new Set([...current, ...filteredStudents.map((student) => student._id)])));
   };
 
-// Clear  selection data from the current session.
+  // Clear selection data from the current session.
   const clearSelection = () => {
     setSelectedIds([]);
   };
 
-// Delete  selected data for the current flow.
+  // Delete selected data for the current flow.
   const deleteSelected = async () => {
     if (!selectedIds.length) return;
     const ok = window.confirm(`Remove ${selectedIds.length} selected students from the list?`);
@@ -154,7 +154,7 @@ export default function Students() {
     }
   };
 
-// Prepare and download  csv data as a report.
+  // Prepare and download csv data as a report.
   const downloadCSV = async () => {
     setErr("");
     setMsg("");
@@ -186,7 +186,7 @@ export default function Students() {
           <div className="row" style={{ gap: 10, alignItems: "flex-end", flexWrap: "wrap" }}>
             <div>
               <label>Session</label>
-            <select className="input placement-year-select" value={placementYear} onChange={(e) => setPlacementYear(e.target.value)}>
+              <select className="input placement-year-select" value={placementYear} onChange={(e) => setPlacementYear(e.target.value)}>
                 {placementYears.map((year) => <option key={year} value={year}>{year}</option>)}
               </select>
             </div>
@@ -250,7 +250,7 @@ export default function Students() {
                 <td>{formatPlacementYear(student.placementYear) || "-"}</td>
                 <td><span className="badge">{student.isApproved ? "YES" : "NO"}</span></td>
                 <td>{student.resumeFile ? <button className="btn secondary" onClick={() => viewResume(student._id)}>View PDF</button> : <small className="muted">-</small>}</td>
-                <td>{student.profilePhotoFile ? <div className="row" style={{ gap: 8, alignItems: "center" }}><button className="btn secondary" onClick={() => openPhoto(student._id)}>View</button><button type="button" className="icon-btn" title="Download photo" aria-label="Download photo" onClick={() => downloadPhoto(student._id, student.name)}>â¬‡</button></div> : <small className="muted">-</small>}</td>
+                <td>{student.profilePhotoFile ? <div className="row" style={{ gap: 8, alignItems: "center" }}><button className="btn secondary" onClick={() => openPhoto(student._id)}>View</button><button type="button" className="icon-btn" title="Download photo" aria-label="Download photo" onClick={() => downloadPhoto(student._id, student.name)}>Download</button></div> : <small className="muted">-</small>}</td>
                 <td><div className="row" style={{ gap: 8, flexWrap: "wrap" }}><button className={`btn ${student.isApproved ? "danger" : ""}`} onClick={() => toggle(student._id, student.isApproved)}>{student.isApproved ? "Disapprove" : "Approve"}</button><button className="btn secondary" onClick={() => removeStudent(student._id, student.name)}>Remove</button></div></td>
               </tr>
             ))}

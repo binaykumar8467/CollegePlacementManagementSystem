@@ -49,18 +49,19 @@ export default function DriveDetails() {
       .catch(e => setErr(e?.response?.data?.message || "Failed to load drive"));
   }, [driveId]);
 
-// Handle the register logic used in this file.
+  // Handle the register logic used in this file.
   const register = async () => {
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await api.post(`/api/drives/${driveId}/register`);
-      setMsg("âœ… Registered for drive!");
+      setMsg("Registered for drive!");
     } catch (e) {
       setErr(e?.response?.data?.message || "Register failed");
     }
   };
 
-// Delete  drive data for the current flow.
+  // Delete drive data for the current flow.
   const deleteDrive = async () => {
     const ok = window.confirm("Delete this drive?");
     if (!ok) return;
@@ -77,7 +78,7 @@ export default function DriveDetails() {
     return (
       <div className="container">
         <div className="card">
-          {err ? <p style={{ color:"#b00020" }}>{err}</p> : <p>Loading...</p>}
+          {err ? <p style={{ color: "#b00020" }}>{err}</p> : <p>Loading...</p>}
           <BackButton fallback="/drives" label="Back" />
         </div>
       </div>
@@ -92,10 +93,10 @@ export default function DriveDetails() {
   return (
     <div className="container">
       <div className="card">
-        <div className="row" style={{ justifyContent:"space-between" }}>
+        <div className="row" style={{ justifyContent: "space-between" }}>
           <div>
             <h2>{drive.title}</h2>
-            <small className="muted">{drive.company} â€¢ {new Date(drive.dateTime).toLocaleString()}</small>
+            <small className="muted">{drive.company} | {new Date(drive.dateTime).toLocaleString()}</small>
           </div>
           <BackButton fallback="/drives" label="Back" />
         </div>
@@ -116,7 +117,7 @@ export default function DriveDetails() {
         </div>
 
         {msg ? <p>{msg}</p> : null}
-        {err ? <p style={{ color:"#b00020" }}>{err}</p> : null}
+        {err ? <p style={{ color: "#b00020" }}>{err}</p> : null}
 
         {role === "student" ? (
           <>

@@ -57,7 +57,7 @@ export default function StudentDashboard() {
   }, []);
 
   useEffect(() => {
-    Promise.all([api.get('/api/jobs'), api.get('/api/drives'), api.get('/api/notices'), api.get('/api/placements'), api.get('/api/interviews/my')])
+    Promise.all([api.get("/api/jobs"), api.get("/api/drives"), api.get("/api/notices"), api.get("/api/placements"), api.get("/api/interviews/my")])
       .then(([jobsRes, drivesRes, noticesRes, placementsRes, interviewsRes]) => {
         setUpdates({
           jobs: hasUnseen(MODULE_KEYS.jobs, latestTimestamp(jobsRes.data || [])),
@@ -76,7 +76,7 @@ export default function StudentDashboard() {
     <div className="container">
       <div className="card">
         <div className="row" style={{ justifyContent: "space-between" }}>
-          <div><h2>Student Dashboard</h2><small className="muted">{user?.name} â€¢ {user?.email}</small></div>
+          <div><h2>Student Dashboard</h2><small className="muted">{user?.name} | {user?.email}</small></div>
           <div className="row"><Link className="btn secondary" to="/student/profile" state={{ from: "/student/dashboard" }}>Profile</Link><Link className="btn secondary dashboard-interviews-btn" to="/student/interviews" state={{ from: "/student/dashboard" }}><span className="nav-with-dot">Interviews{updates.interviews ? <span className="notif-dot" aria-hidden="true" /> : null}</span></Link></div>
         </div>
 
@@ -94,7 +94,7 @@ export default function StudentDashboard() {
           <QuickLink title="Placements" subtitle="Placement results and updates" to="/placements" showDot={updates.placements} />
         </div>
 
-        {err ? <p style={{ color:"#b00020" }}>{err}</p> : null}
+        {err ? <p style={{ color: "#b00020" }}>{err}</p> : null}
 
         <h3 style={{ marginTop: 14 }}>My Applications</h3>
         <table className="table">

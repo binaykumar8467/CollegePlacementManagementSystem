@@ -66,22 +66,24 @@ export default function JobDetails() {
       .catch(e => setErr(e?.response?.data?.message || "Failed to load job"));
   }, [jobId]);
 
-// Apply  logic for the current user action.
+  // Apply logic for the current user action.
   const apply = async () => {
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await api.post(`/api/applications/${jobId}/apply`);
-      setMsg("âœ… Applied successfully!");
+      setMsg("Applied successfully!");
     } catch (e) {
       setErr(e?.response?.data?.message || "Apply failed");
     }
   };
 
-// Delete  job data for the current flow.
+  // Delete job data for the current flow.
   const deleteJob = async () => {
     const ok = window.confirm("Delete this job?");
     if (!ok) return;
-    setErr(""); setMsg("");
+    setErr("");
+    setMsg("");
     try {
       await api.delete(`/api/jobs/${jobId}`);
       nav("/jobs");
@@ -114,7 +116,7 @@ export default function JobDetails() {
         <div className="row" style={{ justifyContent: "space-between" }}>
           <div>
             <h2>{job.title}</h2>
-            <small className="muted">{job.company} â€¢ {job.location || "â€”"}</small>
+            <small className="muted">{job.company} | {job.location || "-"}</small>
           </div>
           <BackButton fallback="/jobs" label="Back" />
         </div>
@@ -124,15 +126,15 @@ export default function JobDetails() {
             <strong>Deadline</strong><div>{new Date(job.deadline).toLocaleString()}</div>
           </div>
           <div className="kpi">
-            <strong>Salary</strong><div>{job.salary || "â€”"}</div>
+            <strong>Salary</strong><div>{job.salary || "-"}</div>
           </div>
         </div>
 
         <div style={{ marginTop: 12 }}>
           <h3>Description</h3>
-          <p>{job.description || "â€”"}</p>
+          <p>{job.description || "-"}</p>
           <h3>Eligibility Courses</h3>
-          <p>{eligibilityCourses.length ? eligibilityCourses.join(", ") : "â€”"}</p>
+          <p>{eligibilityCourses.length ? eligibilityCourses.join(", ") : "-"}</p>
         </div>
 
         {msg ? <p>{msg}</p> : null}
