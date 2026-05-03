@@ -1,3 +1,4 @@
+// Displays the student dashboard with quick access to student features.
 import React, { useEffect, useState } from "react";
 import api from "../../lib/api";
 import { getUser } from "../../lib/auth";
@@ -11,6 +12,7 @@ const dashboardCardStyle = {
   display: "block"
 };
 
+// Render a reusable dashboard shortcut card for students.
 function QuickLink({ title, subtitle, to, showDot }) {
   return (
     <Link to={to} state={{ from: "/student/dashboard" }} className="card quick-link-card" style={dashboardCardStyle}>
@@ -21,6 +23,7 @@ function QuickLink({ title, subtitle, to, showDot }) {
   );
 }
 
+// Render the student dashboard and load summary data for the student.
 export default function StudentDashboard() {
   const user = getUser();
   const [items, setItems] = useState([]);
@@ -73,7 +76,7 @@ export default function StudentDashboard() {
     <div className="container">
       <div className="card">
         <div className="row" style={{ justifyContent: "space-between" }}>
-          <div><h2>Student Dashboard</h2><small className="muted">{user?.name} • {user?.email}</small></div>
+          <div><h2>Student Dashboard</h2><small className="muted">{user?.name} â€¢ {user?.email}</small></div>
           <div className="row"><Link className="btn secondary" to="/student/profile" state={{ from: "/student/dashboard" }}>Profile</Link><Link className="btn secondary dashboard-interviews-btn" to="/student/interviews" state={{ from: "/student/dashboard" }}><span className="nav-with-dot">Interviews{updates.interviews ? <span className="notif-dot" aria-hidden="true" /> : null}</span></Link></div>
         </div>
 

@@ -1,3 +1,4 @@
+// Defines the main React routes and role-based page access for the frontend.
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Nav from "./components/Nav";
@@ -30,6 +31,7 @@ import Students from "./pages/tpo/Students";
 import CreateDrive from "./pages/tpo/CreateDrive";
 import DriveRegistrations from "./pages/tpo/DriveRegistrations";
 
+// Render the full application router and wire pages to their routes.
 export default function App() {
   return (
     <BrowserRouter>

@@ -1,3 +1,4 @@
+// Defines the MongoDB schema for campus placement drives.
 const mongoose = require("mongoose");
 
 const driveSchema = new mongoose.Schema(

@@ -1,3 +1,4 @@
+// Declares API routes for job applications and applicant management.
 const router = require("express").Router();
 const { authRequired, requireRole } = require("../middleware/auth.middleware");
 const ctrl = require("../controllers/application.controller");

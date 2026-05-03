@@ -1,3 +1,4 @@
+// Declares API routes for creating and managing portal notices.
 const router = require("express").Router();
 const { authRequired, requireRole } = require("../middleware/auth.middleware");
 const { uploadNoticeAttachment } = require("../middleware/upload.middleware");

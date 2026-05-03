@@ -7,6 +7,7 @@ const Placement = require("../src/models/Placement");
 const Student = require("../src/models/Student");
 const { buildStudentSnapshot } = require("../src/utils/studentSnapshot");
 
+// Handle the backfill collection logic used in this file.
 async function backfillCollection(Model, label) {
   const docs = await Model.find({
     $or: [
@@ -31,6 +32,7 @@ async function backfillCollection(Model, label) {
   console.log(`${label}: ${updated} updated`);
 }
 
+// Handle the run logic used in this file.
 async function run() {
   await connectDB();
   await backfillCollection(Application, "Applications");

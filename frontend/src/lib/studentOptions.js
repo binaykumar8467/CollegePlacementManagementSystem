@@ -1,3 +1,4 @@
+// Stores reusable dropdown options and formatting helpers for student forms.
 export const COURSE_OPTIONS = [
   "BA", "BBA", "BCA", "B.Com", "B.Com (Hons)", "B.Des", "B.Ed", "BHM", "BJMC", "B.Lib.I.Sc",
   "B.P.Ed", "B.Pharm", "B.Sc", "B.Sc Agriculture", "B.Sc Biotechnology", "B.Sc Computer Science",

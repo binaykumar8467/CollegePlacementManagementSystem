@@ -1,3 +1,4 @@
+// Renders the top navigation bar and adapts links based on the logged-in user.
 import React, { useEffect, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { clearAuth, getRole, getUser } from "../lib/auth";
@@ -7,11 +8,13 @@ import LoginMenu from "./LoginMenu";
 
 const THEME_STORAGE_KEY = "cpms_theme_mode";
 
+// Show a small notification indicator in the navigation bar.
 function Dot({ show }) {
   if (!show) return null;
   return <span className="notif-dot" aria-hidden="true" />;
 }
 
+// Render the main navigation bar and role-aware menu links.
 export default function Nav() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -27,6 +30,7 @@ export default function Nav() {
   });
   const [updates, setUpdates] = useState({ jobs: false, drives: false, notices: false, placements: false, interviews: false });
 
+// Handle the logout logic used in this file.
   const logout = () => {
     clearAuth();
     navigate("/");
@@ -45,6 +49,7 @@ export default function Nav() {
     if (role !== "student") return;
     let cancelled = false;
 
+// Load  data needed by this screen.
     const load = async () => {
       try {
         const [jobsRes, drivesRes, noticesRes, placementsRes, interviewsRes] = await Promise.all([
@@ -68,6 +73,7 @@ export default function Nav() {
     };
 
     load();
+// Handle the handler logic used in this file.
     const handler = () => load();
     window.addEventListener("cpms-notifications-updated", handler);
     return () => {
@@ -81,6 +87,7 @@ export default function Nav() {
   }, [location.pathname, location.hash]);
 
   useEffect(() => {
+// Handle the handle resize logic used in this file.
     const handleResize = () => {
       if (window.innerWidth > 820) setMenuOpen(false);
     };
@@ -88,9 +95,12 @@ export default function Nav() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+// Convert this value into the format expected by the UI or API.
   const toggleTheme = () => setIsDarkMode((value) => !value);
+// Handle the nav class logic used in this file.
   const navClass = ({ isActive }) => `nav-link${isActive ? " active" : ""}`;
 
+// Handle the go home logic used in this file.
   const goHome = (event) => {
     event.preventDefault();
     if (location.pathname === "/" && !location.hash) {
@@ -103,6 +113,7 @@ export default function Nav() {
     });
   };
 
+// Handle the go to about logic used in this file.
   const goToAbout = (event) => {
     event.preventDefault();
     if (location.pathname === "/") {

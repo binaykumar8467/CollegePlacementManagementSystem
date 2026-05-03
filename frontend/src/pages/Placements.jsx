@@ -1,3 +1,4 @@
+// Displays placement records and placement report related actions.
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 import { getRole } from "../lib/auth";
@@ -6,10 +7,12 @@ import BackButton from "../components/BackButton";
 import { latestTimestamp, markModuleSeen, MODULE_KEYS } from "../lib/notifications";
 import { formatPlacementYear, getPlacementYearOptions } from "../lib/studentOptions";
 
+// Read placement details from the live student record or saved snapshot.
 function getStudentView(placement) {
   return placement?.student || placement?.studentSnapshot || {};
 }
 
+// Render the placement list and placement report actions.
 export default function Placements() {
   const role = getRole();
   const placementYears = useMemo(() => getPlacementYearOptions(), []);
@@ -18,6 +21,7 @@ export default function Placements() {
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
 
+// Load  data needed by this screen.
   const load = () => {
     setErr(""); setMsg("");
     const params = role === "tpo" ? { placementYear } : undefined;
@@ -28,6 +32,7 @@ export default function Placements() {
 
   useEffect(() => { load(); }, [role, placementYear]);
 
+// Prepare and download  data as a report.
   const download = async () => {
     setErr(""); setMsg("");
     try {
@@ -48,6 +53,7 @@ export default function Placements() {
     }
   };
 
+// Delete  placement data for the current flow.
   const deletePlacement = async (placementId) => {
     if (!window.confirm("Delete this placement entry?")) return;
     setErr(""); setMsg("");

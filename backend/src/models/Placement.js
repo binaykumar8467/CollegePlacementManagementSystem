@@ -1,3 +1,4 @@
+// Defines the MongoDB schema for final placement records of selected students.
 const mongoose = require("mongoose");
 
 const studentSnapshotSchema = new mongoose.Schema(

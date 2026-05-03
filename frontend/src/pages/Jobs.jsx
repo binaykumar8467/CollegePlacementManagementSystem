@@ -1,3 +1,4 @@
+// Lists available jobs and management actions based on user role.
 import React, { useEffect, useState } from "react";
 import api from "../lib/api";
 import { getRole } from "../lib/auth";
@@ -5,6 +6,7 @@ import { Link, useLocation } from "react-router-dom";
 import BackButton from "../components/BackButton";
 import { latestTimestamp, markModuleSeen, MODULE_KEYS } from "../lib/notifications";
 
+// Render the job listing page and load available job posts.
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);
   const [err, setErr] = useState("");
@@ -13,6 +15,7 @@ export default function Jobs() {
   const location = useLocation();
   const backFallback = role === "student" ? "/student/dashboard" : role === "tpo" ? "/tpo/dashboard" : "/";
 
+// Load  jobs data needed by this screen.
   const loadJobs = () => {
     api.get("/api/jobs")
       .then(r => {
@@ -24,6 +27,7 @@ export default function Jobs() {
 
   useEffect(() => { loadJobs(); }, []);
 
+// Delete  job data for the current flow.
   const deleteJob = async (jobId) => {
     const ok = window.confirm("Delete this job?");
     if (!ok) return;
@@ -36,6 +40,7 @@ export default function Jobs() {
     }
   };
 
+// Prepare and download  report data as a report.
   const downloadReport = async () => {
     setErr(""); setMsg("");
     try {

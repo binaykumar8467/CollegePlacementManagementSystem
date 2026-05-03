@@ -1,3 +1,4 @@
+// Lists available campus drives for students and TPO users.
 import React, { useEffect, useState } from "react";
 import api from "../lib/api";
 import { getRole } from "../lib/auth";
@@ -5,6 +6,7 @@ import { Link, useLocation } from "react-router-dom";
 import BackButton from "../components/BackButton";
 import { latestTimestamp, markModuleSeen, MODULE_KEYS } from "../lib/notifications";
 
+// Render the drive listing page and load available drives.
 export default function Drives() {
   const [drives, setDrives] = useState([]);
   const [err, setErr] = useState("");
@@ -13,6 +15,7 @@ export default function Drives() {
   const location = useLocation();
   const backFallback = role === "student" ? "/student/dashboard" : role === "tpo" ? "/tpo/dashboard" : "/";
 
+// Load  drives data needed by this screen.
   const loadDrives = () => {
     api.get("/api/drives")
       .then(r => {
@@ -24,6 +27,7 @@ export default function Drives() {
 
   useEffect(() => { loadDrives(); }, []);
 
+// Delete  drive data for the current flow.
   const deleteDrive = async (driveId) => {
     const ok = window.confirm("Delete this drive?");
     if (!ok) return;
@@ -36,6 +40,7 @@ export default function Drives() {
     }
   };
 
+// Prepare and download  report data as a report.
   const downloadReport = async () => {
     setErr(''); setMsg('');
     try {

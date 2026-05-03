@@ -1,14 +1,18 @@
+// Normalizes identity fields and checks for duplicate email or phone values.
 const Student = require('../models/Student');
 const Tpo = require('../models/Tpo');
 
+// Convert email input into a consistent lowercase format.
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
 }
 
+// Keep only the last 10 digits of the phone number for consistent matching.
 function normalizePhone(phone) {
   return String(phone || '').trim();
 }
 
+// Prevent duplicate email or phone values across students and TPO users.
 async function ensureUniqueIdentity({ email, phone, excludeStudentId, excludeTpoId }) {
   const normalizedEmail = normalizeEmail(email);
   const normalizedPhone = normalizePhone(phone);

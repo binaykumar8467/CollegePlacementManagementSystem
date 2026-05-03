@@ -1,8 +1,10 @@
+// Renders the landing page with the project introduction and entry options.
 import { useEffect } from "react";
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getAuth } from "../lib/auth";
 
+// Render the landing page and guide users to the main portal sections.
 export default function Home() {
   const auth = getAuth();
   const location = useLocation();

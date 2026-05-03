@@ -1,3 +1,4 @@
+// Displays placement notices and allows TPO users to manage them.
 import React, { useEffect, useMemo, useState } from "react";
 import api from "../lib/api";
 import { getRole } from "../lib/auth";
@@ -6,6 +7,7 @@ import BackButton from "../components/BackButton";
 import { latestTimestamp, markModuleSeen, MODULE_KEYS } from "../lib/notifications";
 import { getPlacementYearOptions } from "../lib/studentOptions";
 
+// Format notice dates for display in the notice list.
 function formatDate(value) {
   try {
     return new Date(value).toLocaleString();
@@ -14,11 +16,13 @@ function formatDate(value) {
   }
 }
 
+// Create a short preview of long notice text.
 function shortContent(text) {
   const value = String(text || "").trim();
   return value.length <= 120 ? value : `${value.slice(0, 120)}...`;
 }
 
+// Render the notice board and handle notice management actions.
 export default function Notices() {
   const [items, setItems] = useState([]);
   const [err, setErr] = useState("");
@@ -30,6 +34,7 @@ export default function Notices() {
   const placementYears = useMemo(() => getPlacementYearOptions(), []);
   const [placementYear, setPlacementYear] = useState("");
 
+// Load  notices data needed by this screen.
   const loadNotices = async () => {
     setLoading(true);
     try {
@@ -52,6 +57,7 @@ export default function Notices() {
 
   const openedNotice = useMemo(() => items.find((n) => n._id === openId) || null, [items, openId]);
 
+// Handle the remove notice logic used in this file.
   const removeNotice = async (id) => {
     const ok = window.confirm("Are you sure you want to delete this notice?");
     if (!ok) return;
@@ -67,6 +73,7 @@ export default function Notices() {
     }
   };
 
+// Prepare and download  report data as a report.
   const downloadReport = async () => {
     setErr("");
     setMsg("");

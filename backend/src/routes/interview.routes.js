@@ -1,3 +1,4 @@
+// Declares API routes for interview scheduling and interview listings.
 const router = require("express").Router();
 const { authRequired, requireRole } = require("../middleware/auth.middleware");
 const ctrl = require("../controllers/interview.controller");

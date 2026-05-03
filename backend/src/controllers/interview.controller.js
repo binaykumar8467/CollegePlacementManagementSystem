@@ -1,9 +1,11 @@
+// Creates and lists interview schedules for jobs and placement drives.
 const Interview = require("../models/Interview");
 const Application = require("../models/Application");
 const Drive = require("../models/Drive");
 const DriveRegistration = require("../models/DriveRegistration");
 const Job = require("../models/Job");
 
+// Make sure only the owning TPO can manage job interview schedules.
 async function ensureJobOwnership(job, currentTpoId) {
   if (!job) return false;
   if (!job.createdByTpo || String(job.createdByTpo) === String(currentTpoId)) {
@@ -15,6 +17,7 @@ async function ensureJobOwnership(job, currentTpoId) {
   return true;
 }
 
+// Create or update an interview schedule for a job applicant.
 async function createInterview(req, res) {
   const { applicationId } = req.params;
   const { round, dateTime, location, mode, note } = req.body;
@@ -42,6 +45,7 @@ async function createInterview(req, res) {
   res.status(201).json(interview);
 }
 
+// Create or update an interview schedule for a drive registration.
 async function createDriveInterview(req, res) {
   const { registrationId } = req.params;
   const { round, dateTime, location, mode, note } = req.body;
@@ -70,6 +74,7 @@ async function createDriveInterview(req, res) {
   res.status(201).json(interview);
 }
 
+// Return every interview assigned to the logged-in student.
 async function listMyInterviews(req, res) {
   const apps = await Application.find({ student: req.user.id }).select("_id");
   const ids = apps.map(a => a._id);
@@ -89,6 +94,7 @@ async function listMyInterviews(req, res) {
   res.json(items);
 }
 
+// List interview schedules linked to applicants of a specific job.
 async function listJobInterviews(req, res) {
   const { jobId } = req.params;
   const job = await Job.findById(jobId);
@@ -105,6 +111,7 @@ async function listJobInterviews(req, res) {
   res.json(items);
 }
 
+// List interview schedules linked to registrations of a specific drive.
 async function listDriveInterviews(req, res) {
   const { driveId } = req.params;
   const drive = await Drive.findById(driveId);

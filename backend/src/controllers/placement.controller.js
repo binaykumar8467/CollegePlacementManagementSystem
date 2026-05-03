@@ -1,3 +1,4 @@
+// Manages placement records, selected student entries, and placement reports.
 const Placement = require("../models/Placement");
 const Application = require("../models/Application");
 const Drive = require("../models/Drive");
@@ -8,6 +9,7 @@ const { verifyToken } = require("../utils/jwt");
 const Student = require("../models/Student");
 const { buildStudentSnapshot } = require("../utils/studentSnapshot");
 
+// Add Excel-friendly formatting so placement reports open correctly.
 function excelCsv(csvBody) {
   const bom = "\ufeff";
   const sep = "sep=,\r\n";
@@ -15,22 +17,26 @@ function excelCsv(csvBody) {
   return bom + sep + body;
 }
 
+// Escape commas, quotes, and line breaks before writing CSV values.
 function csvEscape(v) {
   const s = String(v ?? "");
   if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
 
+// Force Excel to keep text fields like phone and roll number unchanged.
 function excelText(v) {
   const s = String(v ?? "");
   if (!s) return "";
   return `="${s.replace(/"/g, '""')}"`;
 }
 
+// Read student data from the live relation or the saved snapshot.
 function getStudentDetails(placement) {
   return placement?.student || placement?.studentSnapshot || {};
 }
 
+// Read the user from the JWT token when the placement list is role-aware.
 function getOptionalUser(req) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : "";
@@ -42,6 +48,7 @@ function getOptionalUser(req) {
   }
 }
 
+// Return placement records and filter them by session or TPO ownership.
 async function listPlacements(req, res) {
   const items = await Placement.find()
     .populate("student", "-password")
@@ -60,6 +67,7 @@ async function listPlacements(req, res) {
   res.json(filtered);
 }
 
+// Convert a selected application into a final placement record.
 async function markSelectedToPlacement(req, res) {
   const { applicationId } = req.params;
   const { package: pkg, joiningDate, offerLetterLink } = req.body;
@@ -92,6 +100,7 @@ async function markSelectedToPlacement(req, res) {
   res.status(201).json(placement);
 }
 
+// Delete a placement and restore the related application or registration status.
 async function deletePlacement(req, res) {
   const { placementId } = req.params;
   const placement = await Placement.findById(placementId);
@@ -125,6 +134,7 @@ async function deletePlacement(req, res) {
   res.json({ message: "Placement deleted" });
 }
 
+// Export placement records as a CSV report.
 async function downloadPlacementsReport(req, res) {
   const items = await Placement.find()
     .populate("student", "-password")

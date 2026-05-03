@@ -1,20 +1,30 @@
+// Shows full details of a selected job and handles student job applications.
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import api from "../lib/api";
 import { getRole, getUser } from "../lib/auth";
 import BackButton from "../components/BackButton";
 
+// Normalize course names before comparing job eligibility.
 function normalizeCourseValue(value) {
   return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+// Split the job eligibility text into comparable course values.
 function parseEligibilityCourses(rawEligibility) {
+  if (Array.isArray(rawEligibility)) {
+    return rawEligibility
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+  }
+
   return String(rawEligibility || "")
     .split(/[,/\n|]+/)
     .map((item) => String(item || "").trim())
     .filter(Boolean);
 }
 
+// Check whether the student profile is complete enough for job applications.
 function isProfileComplete(user) {
   if (!user) return false;
   const hasBasicDetails = Boolean(
@@ -29,13 +39,15 @@ function isProfileComplete(user) {
   return false;
 }
 
-function matchesEligibleCourse(studentCourse, rawEligibility) {
-  const eligibleCourses = parseEligibilityCourses(rawEligibility);
+// Compare the student course with the job eligibility rules.
+function matchesEligibleCourse(studentCourse, eligibilitySource) {
+  const eligibleCourses = parseEligibilityCourses(eligibilitySource);
   if (!eligibleCourses.length) return true;
   const normalizedStudentCourse = normalizeCourseValue(studentCourse);
   return eligibleCourses.map(normalizeCourseValue).includes(normalizedStudentCourse);
 }
 
+// Render the job details page and handle job application actions.
 export default function JobDetails() {
   const { jobId } = useParams();
   const nav = useNavigate();
@@ -54,16 +66,18 @@ export default function JobDetails() {
       .catch(e => setErr(e?.response?.data?.message || "Failed to load job"));
   }, [jobId]);
 
+// Apply  logic for the current user action.
   const apply = async () => {
     setErr(""); setMsg("");
     try {
       await api.post(`/api/applications/${jobId}/apply`);
-      setMsg("✅ Applied successfully!");
+      setMsg("âœ… Applied successfully!");
     } catch (e) {
       setErr(e?.response?.data?.message || "Apply failed");
     }
   };
 
+// Delete  job data for the current flow.
   const deleteJob = async () => {
     const ok = window.confirm("Delete this job?");
     if (!ok) return;
@@ -90,7 +104,8 @@ export default function JobDetails() {
   const deadlinePassed = new Date(job.deadline).getTime() < Date.now();
   const approved = Boolean(user?.isApproved);
   const profileComplete = isProfileComplete(user);
-  const courseMatched = matchesEligibleCourse(user?.department, job.eligibility);
+  const eligibilityCourses = parseEligibilityCourses(job.eligibilityCourses?.length ? job.eligibilityCourses : job.eligibility);
+  const courseMatched = matchesEligibleCourse(user?.department, eligibilityCourses);
   const canApply = approved && profileComplete && courseMatched && !deadlinePassed;
 
   return (
@@ -99,7 +114,7 @@ export default function JobDetails() {
         <div className="row" style={{ justifyContent: "space-between" }}>
           <div>
             <h2>{job.title}</h2>
-            <small className="muted">{job.company} • {job.location || "—"}</small>
+            <small className="muted">{job.company} â€¢ {job.location || "â€”"}</small>
           </div>
           <BackButton fallback="/jobs" label="Back" />
         </div>
@@ -109,15 +124,15 @@ export default function JobDetails() {
             <strong>Deadline</strong><div>{new Date(job.deadline).toLocaleString()}</div>
           </div>
           <div className="kpi">
-            <strong>Salary</strong><div>{job.salary || "—"}</div>
+            <strong>Salary</strong><div>{job.salary || "â€”"}</div>
           </div>
         </div>
 
         <div style={{ marginTop: 12 }}>
           <h3>Description</h3>
-          <p>{job.description || "—"}</p>
-          <h3>Eligibility</h3>
-          <p>{job.eligibility || "—"}</p>
+          <p>{job.description || "â€”"}</p>
+          <h3>Eligibility Courses</h3>
+          <p>{eligibilityCourses.length ? eligibilityCourses.join(", ") : "â€”"}</p>
         </div>
 
         {msg ? <p>{msg}</p> : null}

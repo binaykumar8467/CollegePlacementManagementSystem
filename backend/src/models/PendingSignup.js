@@ -1,3 +1,4 @@
+// Stores temporary signup data and OTP verification state before account creation.
 const mongoose = require("mongoose");
 
 const pendingSignupSchema = new mongoose.Schema(

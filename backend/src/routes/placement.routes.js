@@ -1,3 +1,4 @@
+// Declares API routes for placement record management and exports.
 const router = require("express").Router();
 const { authRequired, requireRole } = require("../middleware/auth.middleware");
 const ctrl = require("../controllers/placement.controller");

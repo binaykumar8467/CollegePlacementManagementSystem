@@ -1,9 +1,11 @@
+// Provides the form for creating and editing placement notices.
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import api from "../../lib/api";
 import BackButton from "../../components/BackButton";
 import { getCurrentPlacementYear, getPlacementYearOptions } from "../../lib/studentOptions";
 
+// Render the notice form and handle notice creation or editing.
 export default function CreateNotice() {
   const nav = useNavigate();
   const { noticeId } = useParams();
@@ -53,6 +55,7 @@ export default function CreateNotice() {
     return "";
   }, [attachment, existingAttachment, removeAttachment]);
 
+// Handle the submit logic used in this file.
   const submit = async (e) => {
     e.preventDefault();
     setErr("");

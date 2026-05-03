@@ -1,3 +1,4 @@
+// Validates signup form values before they are submitted from the frontend.
 import { getPlacementYearOptions } from "./studentOptions";
 
 const emailRegex = /^[A-Za-z0-9._%+-]+@gmail\.com$/i;
@@ -8,10 +9,12 @@ const passwordLetterRegex = /[A-Za-z]/;
 const passwordNumberRegex = /\d/;
 const passwordSpecialRegex = /[^A-Za-z0-9]/;
 
+// Trim form input before running validation checks.
 function normalizeText(value) {
   return String(value || "").trim();
 }
 
+// Validate the user name field on the frontend.
 export function validateName(value) {
   const name = normalizeText(value);
   if (!name) return "Name is required";
@@ -19,6 +22,7 @@ export function validateName(value) {
   return "";
 }
 
+// Validate the email field on the frontend.
 export function validateEmail(value) {
   const email = normalizeText(value);
   if (!email) return "Email is required";
@@ -28,6 +32,7 @@ export function validateEmail(value) {
   return "";
 }
 
+// Validate a login identifier that may be an email or phone number.
 export function validateEmailOrPhone(value) {
   const input = normalizeText(value);
   if (!input) return "Email or phone number is required";
@@ -40,6 +45,7 @@ export function validateEmailOrPhone(value) {
   return "Enter a valid email or phone number";
 }
 
+// Validate the password field on the frontend.
 export function validatePassword(value) {
   const password = String(value || "");
   if (!password) return "Password is required";
@@ -51,6 +57,7 @@ export function validatePassword(value) {
   return "";
 }
 
+// Validate the phone number field on the frontend.
 export function validatePhone(value) {
   const phone = normalizeText(value);
   if (!phone) return "Phone number is required";
@@ -58,6 +65,7 @@ export function validatePhone(value) {
   return "";
 }
 
+// Validate the placement session field on the frontend.
 export function validatePlacementYear(value) {
   const placementYear = normalizeText(value);
   const placementYears = getPlacementYearOptions();
@@ -66,6 +74,7 @@ export function validatePlacementYear(value) {
   return "";
 }
 
+// Validate the college name field for TPO signup.
 export function validateCollegeName(value) {
   const collegeName = normalizeText(value);
   if (!collegeName) return "College name is required";
@@ -73,12 +82,14 @@ export function validateCollegeName(value) {
   return "";
 }
 
+// Validate the previous-password field required for additional TPO accounts.
 export function validatePreviousPassword(value, needsPreviousPassword = false) {
   const previousPassword = String(value || "").trim();
   if (needsPreviousPassword && !previousPassword) return "Previous TPO password is required";
   return "";
 }
 
+// Run field-level validation for the student signup form.
 export function validateStudentField(name, value) {
   switch (name) {
     case "name": return validateName(value);
@@ -90,6 +101,7 @@ export function validateStudentField(name, value) {
   }
 }
 
+// Run field-level validation for the TPO signup form.
 export function validateTpoField(name, value, needsPreviousPassword = false) {
   switch (name) {
     case "name": return validateName(value);
@@ -102,6 +114,7 @@ export function validateTpoField(name, value, needsPreviousPassword = false) {
   }
 }
 
+// Check whether the complete student signup form is valid.
 export function validateStudentSignup(form) {
   const requiredFields = ["name", "email", "password", "phone", "placementYear"];
   const allEmpty = requiredFields.every((field) => !normalizeText(form[field]));
@@ -115,6 +128,7 @@ export function validateStudentSignup(form) {
   return "";
 }
 
+// Collect field errors for the student signup form.
 export function getStudentSignupErrors(form) {
   const fieldOrder = ["name", "email", "password", "phone", "placementYear"];
   return fieldOrder.reduce((errors, field) => {
@@ -126,6 +140,7 @@ export function getStudentSignupErrors(form) {
   }, {});
 }
 
+// Check whether the complete TPO signup form is valid.
 export function validateTpoSignup(form, needsPreviousPassword = false) {
   const requiredFields = ["name", "email", "password", "collegeName", "phone"];
   const allRequiredEmpty = requiredFields.every((field) => !normalizeText(form[field]));
@@ -140,6 +155,7 @@ export function validateTpoSignup(form, needsPreviousPassword = false) {
   return "";
 }
 
+// Collect field errors for the TPO signup form.
 export function getTpoSignupErrors(form, needsPreviousPassword = false) {
   const fieldOrder = ["name", "email", "password", "collegeName", "phone", "previousPassword"];
   return fieldOrder.reduce((errors, field) => {

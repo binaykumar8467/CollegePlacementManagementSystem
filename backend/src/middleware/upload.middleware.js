@@ -1,15 +1,18 @@
+// Configures file upload rules for student resumes and profile photos.
 const multer = require("multer");
 const fs = require("fs");
 const path = require("path");
 
 const memoryStorage = multer.memoryStorage();
 
+// Accept only PDF files for student resume uploads.
 function resumeFileFilter(req, file, cb) {
   const isPdf = file.mimetype === "application/pdf" || String(file.originalname || "").toLowerCase().endsWith(".pdf");
   if (!isPdf) return cb(new Error("Only PDF files are allowed"), false);
   cb(null, true);
 }
 
+// Accept only image files for student profile-photo uploads.
 function profilePhotoFilter(req, file, cb) {
   const allowed = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
   const lowerName = String(file.originalname || "").toLowerCase();
@@ -50,6 +53,7 @@ const noticeStorage = multer.diskStorage({
   }
 });
 
+// Allow common document and image formats for notice attachments.
 function noticeFileFilter(req, file, cb) {
   const allowedMimeTypes = new Set([
     "application/pdf",

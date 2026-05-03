@@ -1,3 +1,4 @@
+// Declares API routes for placement drives and drive registrations.
 const router = require("express").Router();
 const { authRequired, requireRole } = require("../middleware/auth.middleware");
 const ctrl = require("../controllers/drive.controller");

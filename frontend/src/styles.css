@@ -1,3 +1,4 @@
+/* Defines the shared visual styles and layout rules for the frontend UI. */
 
 
 :root{
@@ -34,7 +35,7 @@ a{ color: inherit; text-decoration: none; }
   max-width: 1440px;
   margin: 0 auto;
   padding: 20px;
-  /* ✅ ensures first content never hides under sticky navbar */
+  /* âœ… ensures first content never hides under sticky navbar */
   padding-top: calc(20px + var(--nav-h) * 0);
 }
 
@@ -45,7 +46,7 @@ a{ color: inherit; text-decoration: none; }
   z-index: 9999;
   overflow: visible !important;
 
-  /* ✅ grid prevents “links going inside/down” issues */
+  /* âœ… grid prevents â€œlinks going inside/downâ€ issues */
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -79,7 +80,7 @@ a{ color: inherit; text-decoration: none; }
   z-index: 10001;
   overflow: visible !important;
 
-  /* Desktop: keep one line, never “drop inside” */
+  /* Desktop: keep one line, never â€œdrop insideâ€ */
   white-space: nowrap;
   flex-wrap: nowrap;
 }
@@ -313,7 +314,7 @@ body.college-theme {
   backdrop-filter: blur(8px);
   border: 1px solid rgba(255,255,255,0.40);
 
-  /* ✅ IMPORTANT: NOT sticky => prevents all overlaps */
+  /* âœ… IMPORTANT: NOT sticky => prevents all overlaps */
   position: relative;
   z-index: 5000;
   overflow: visible;
@@ -817,10 +818,10 @@ body:not(.college-theme) .table {
 
 body:not(.college-theme) .table th {
   background: #002147;
-  color: #fff !important; /* dark header → white text */
+  color: #fff !important; /* dark header â†’ white text */
 }
 
-/* Dark sections → auto white text */
+/* Dark sections â†’ auto white text */
 body:not(.college-theme) .nav,
 body:not(.college-theme) .dark-section,
 body:not(.college-theme) .bg-dark {
@@ -1402,10 +1403,10 @@ body:not(.college-theme) .nav .badge {
   transition: all 0.25s ease;
 }
 
-/* 🔥 HOVER (light glass highlight) */
+/* ðŸ”¥ HOVER (light glass highlight) */
 .nav .links .nav-link:hover,
 .nav .links a:hover {
-  background: rgba(255, 255, 255, 0.18) !important;  /* 👈 light highlight */
+  background: rgba(255, 255, 255, 0.18) !important;  /* ðŸ‘ˆ light highlight */
   color: #ffffff !important;
 
   border-radius: 10px;
@@ -1417,7 +1418,7 @@ body:not(.college-theme) .nav .badge {
   box-shadow: 0 4px 15px rgba(255,255,255,0.25);
 }
 
-/* 🔥 ACTIVE LINK */
+/* ðŸ”¥ ACTIVE LINK */
 .nav .links .nav-link.active {
   background: rgba(255,255,255,0.25) !important;
   color: #ffffff !important;

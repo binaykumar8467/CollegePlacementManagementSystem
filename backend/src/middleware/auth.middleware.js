@@ -1,5 +1,7 @@
+// Verifies JWT tokens and protects routes based on authenticated user roles.
 const { verifyToken } = require("../utils/jwt");
 
+// Block requests that do not include a valid JWT token.
 function authRequired(req, res, next) {
   const header = req.headers.authorization || "";
   const token = header.startsWith("Bearer ") ? header.slice(7) : null;
@@ -14,6 +16,7 @@ function authRequired(req, res, next) {
   }
 }
 
+// Allow the route only when the logged-in user has the required role.
 function requireRole(role) {
   return (req, res, next) => {
     if (!req.user) return res.status(401).json({ message: "Unauthorized" });

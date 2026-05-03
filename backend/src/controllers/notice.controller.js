@@ -1,8 +1,10 @@
+// Handles notice creation, updates, listing, and deletion for announcements.
 const fs = require("fs");
 const path = require("path");
 const Notice = require("../models/Notice");
 const { getCurrentPlacementYear, normalizePlacementYear } = require("../utils/placementYear");
 
+// Convert the uploaded notice file into a storable attachment object.
 function buildAttachment(file) {
   if (!file) return undefined;
   return {
@@ -14,21 +16,25 @@ function buildAttachment(file) {
   };
 }
 
+// Remove the old attachment file from disk when a notice is updated or deleted.
 function deleteStoredFile(fileName) {
   if (!fileName) return;
   const filePath = path.join(process.cwd(), "uploads", "notices", fileName);
   fs.unlink(filePath, () => {});
 }
 
+// Add Excel-friendly formatting so notice reports open correctly.
 function excelCsv(csvBody) {
   return "\ufeffsep=,\r\n" + String(csvBody).replace(/\r?\n/g, "\r\n");
 }
+// Escape commas, quotes, and line breaks before writing CSV values.
 function csvEscape(v) {
   const s = String(v ?? "");
   if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
 
+// Return notices in reverse creation order for portal display.
 async function listNotices(req, res) {
   const placementYear = normalizePlacementYear(req.query.placementYear);
   const query = placementYear ? { placementYear } : {};
@@ -36,6 +42,7 @@ async function listNotices(req, res) {
   res.json(notices);
 }
 
+// Create a new notice with an optional attachment file.
 async function createNotice(req, res) {
   const { title, content, placementYear } = req.body;
   const normalizedPlacementYear = normalizePlacementYear(placementYear) || getCurrentPlacementYear();
@@ -52,6 +59,7 @@ async function createNotice(req, res) {
   res.status(201).json(notice);
 }
 
+// Update a notice and replace its attachment when needed.
 async function updateNotice(req, res) {
   const { id } = req.params;
   const { title, content, placementYear } = req.body;
@@ -78,6 +86,7 @@ async function updateNotice(req, res) {
   res.json(notice);
 }
 
+// Delete a notice and remove its stored attachment file.
 async function deleteNotice(req, res) {
   const { id } = req.params;
   const notice = await Notice.findById(id);
@@ -89,6 +98,7 @@ async function deleteNotice(req, res) {
   res.json({ message: "Notice deleted" });
 }
 
+// Export the notice list as a CSV report.
 async function downloadNoticesReport(req, res) {
   const placementYear = normalizePlacementYear(req.query.placementYear);
   const query = { createdByTpo: req.user.id, ...(placementYear ? { placementYear } : {}) };

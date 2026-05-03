@@ -1,3 +1,4 @@
+// Defines the MongoDB schema for student accounts, profiles, and uploaded documents.
 const mongoose = require("mongoose");
 const { getCurrentPlacementYear } = require("../utils/placementYear");
 

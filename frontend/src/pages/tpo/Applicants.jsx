@@ -1,3 +1,4 @@
+// Lets TPO users review job applicants, update status, and manage interviews.
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../../lib/api";
@@ -7,18 +8,22 @@ import { COURSE_OPTIONS, getCurrentPlacementYear, getPlacementYearOptions } from
 const statuses = ["APPLIED", "SHORTLISTED", "REJECTED", "SELECTED"];
 const defaultSchedule = { round: "Round 1", dateTime: "", mode: "OFFLINE", location: "", note: "" };
 
+// Read applicant details from the live student record or saved snapshot.
 function getStudentView(app) {
   return app?.student || app?.studentSnapshot || {};
 }
 
+// Convert stored date values into the browser datetime-local input format.
 function toInputDateTime(value) {
   if (!value) return "";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "";
+// Handle the pad logic used in this file.
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Render the applicant-management page for one job.
 export default function Applicants() {
   const { jobId } = useParams();
   const [apps, setApps] = useState([]);
@@ -60,6 +65,7 @@ export default function Applicants() {
 
   const allVisibleSelected = filteredApps.length > 0 && filteredApps.every((app) => selectedIds.includes(app._id));
 
+// Load  data needed by this screen.
   const load = () => {
     setErr("");
     setMsg("");
@@ -79,6 +85,7 @@ export default function Applicants() {
 
   useEffect(() => { load(); }, [jobId, placementYear]);
 
+// Update  status data for the current flow.
   const updateStatus = async (applicationId, status, noteValue = noteDrafts[applicationId] || "") => {
     setErr("");
     setMsg("");
@@ -91,6 +98,7 @@ export default function Applicants() {
     }
   };
 
+// Handle the on status change logic used in this file.
   const onStatusChange = async (app, status) => {
     if (status === "SHORTLISTED") {
       const existing = interviewMap.get(String(app._id));
@@ -114,6 +122,7 @@ export default function Applicants() {
     await updateStatus(app._id, status, noteDrafts[app._id] || "");
   };
 
+// Handle the shortlist only logic used in this file.
   const shortlistOnly = async (applicationId) => {
     setErr("");
     setMsg("");
@@ -129,6 +138,7 @@ export default function Applicants() {
     }
   };
 
+// Save  note data for later reuse.
   const saveNote = async (applicationId) => {
     const application = apps.find((app) => app._id === applicationId);
     if (!application) return;
@@ -137,11 +147,13 @@ export default function Applicants() {
     setNoteFor("");
   };
 
+// Open  schedule content for the current user.
   const openSchedule = (applicationId) => {
     setShortlistChoiceFor("");
     setScheduleFor(applicationId);
   };
 
+// Save  interview data for later reuse.
   const saveInterview = async (applicationId) => {
     if (!form.dateTime) {
       setErr("Interview date & time required");
@@ -163,6 +175,7 @@ export default function Applicants() {
     }
   };
 
+// Prepare and download  csv data as a report.
   const downloadCSV = async () => {
     setErr("");
     setMsg("");
@@ -183,6 +196,7 @@ export default function Applicants() {
     }
   };
 
+// Convert this value into the format expected by the UI or API.
   const toggleSelected = (applicationId) => {
     setSelectedIds((current) => (
       current.includes(applicationId)
@@ -191,6 +205,7 @@ export default function Applicants() {
     ));
   };
 
+// Convert this value into the format expected by the UI or API.
   const toggleSelectAllVisible = () => {
     if (allVisibleSelected) {
       setSelectedIds((current) => current.filter((id) => !filteredApps.some((app) => app._id === id)));
@@ -199,10 +214,12 @@ export default function Applicants() {
     setSelectedIds((current) => Array.from(new Set([...current, ...filteredApps.map((app) => app._id)])));
   };
 
+// Clear  selection data from the current session.
   const clearSelection = () => {
     setSelectedIds([]);
   };
 
+// Handle the bulk update status logic used in this file.
   const bulkUpdateStatus = async () => {
     if (!selectedIds.length) return;
     if (bulkStatus === "SHORTLISTED") {

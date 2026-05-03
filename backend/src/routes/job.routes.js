@@ -1,3 +1,4 @@
+// Declares API routes for job posting management and job reports.
 const router = require("express").Router();
 const { authRequired, requireRole } = require("../middleware/auth.middleware");
 const ctrl = require("../controllers/job.controller");

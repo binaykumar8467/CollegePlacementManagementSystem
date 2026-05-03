@@ -1,8 +1,10 @@
+// Handles the student forgot-password workflow using email OTP verification.
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import { validateEmail, validatePassword } from "../../lib/signupValidation";
 
+// Render the student password-reset page and handle the OTP flow.
 export default function StudentForgotPassword() {
   const nav = useNavigate();
   const [step, setStep] = useState(1);
@@ -12,11 +14,13 @@ export default function StudentForgotPassword() {
   const [msg, setMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
+// Handle the on change logic used in this file.
   const onChange = (k, v) => {
     setForm((s) => ({ ...s, [k]: v }));
     if (err) setErr("");
   };
 
+// Start the  otp step for the current flow.
   const requestOtp = async (e) => {
     e.preventDefault();
     setErr("");
@@ -39,6 +43,7 @@ export default function StudentForgotPassword() {
     }
   };
 
+// Verify  otp data before continuing the flow.
   const verifyOtp = async (e) => {
     e.preventDefault();
     setErr("");
@@ -64,6 +69,7 @@ export default function StudentForgotPassword() {
     }
   };
 
+// Handle the reset password logic used in this file.
   const resetPassword = async (e) => {
     e.preventDefault();
     setErr("");

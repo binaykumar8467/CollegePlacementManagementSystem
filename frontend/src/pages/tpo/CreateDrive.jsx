@@ -1,17 +1,21 @@
+// Provides the form for creating and editing campus placement drives.
 import React, { useEffect, useState } from "react";
 import { useNavigate, Link, useParams } from "react-router-dom";
 import api from "../../lib/api";
 import BackButton from "../../components/BackButton";
 import { COURSE_OPTIONS } from "../../lib/studentOptions";
 
+// Convert stored date values into the browser datetime-local input format.
 function toInputDateTime(value) {
   if (!value) return '';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '';
+// Handle the pad logic used in this file.
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Render the drive form and handle drive creation or editing.
 export default function CreateDrive() {
   const nav = useNavigate();
   const { driveId } = useParams();
@@ -31,9 +35,12 @@ export default function CreateDrive() {
     }).catch((e) => setErr(e?.response?.data?.message || 'Failed to load drive'));
   }, [driveId, isEdit]);
 
+// Handle the on change logic used in this file.
   const onChange=(k,v)=>setForm(s=>({...s,[k]:v}));
+// Handle the on course change logic used in this file.
   const onCourseChange = (e) => onChange("eligibleDepartments", Array.from(e.target.selectedOptions).map(option => option.value).filter(Boolean));
 
+// Handle the submit logic used in this file.
   const submit = async (e) => {
     e.preventDefault(); setErr("");
     try {

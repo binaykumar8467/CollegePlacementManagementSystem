@@ -1,3 +1,4 @@
+// Manages job applications, applicant status updates, and applicant report exports.
 const Application = require("../models/Application");
 const Job = require("../models/Job");
 const Student = require("../models/Student");
@@ -7,6 +8,7 @@ const { normalizePlacementYear } = require("../utils/placementYear");
 const { buildStudentSnapshot } = require("../utils/studentSnapshot");
 const { parseEligibilityCourses, isStudentProfileComplete, matchesEligibleCourse } = require("../utils/studentEligibility");
 
+// Add Excel-friendly formatting so exported CSV files open correctly.
 function excelCsv(csvBody) {
   // Excel-friendly CSV: UTF-8 BOM + "sep=," directive + CRLF line endings
   const bom = "\ufeff";
@@ -15,22 +17,26 @@ function excelCsv(csvBody) {
   return bom + sep + body;
 }
 
+// Escape commas, quotes, and line breaks before writing CSV values.
 function csvEscape(v) {
   const s = String(v ?? "");
   if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
 
+// Force Excel to keep text fields like phone and roll number unchanged.
 function excelText(v) {
   const s = String(v ?? "");
   if (!s) return "";
   return `="${s.replace(/"/g, '""')}"`;
 }
 
+// Read student data from the live relation or the saved snapshot.
 function getStudentDetails(application) {
   return application?.student || application?.studentSnapshot || {};
 }
 
+// Make sure only the owning TPO can manage this job and its applicants.
 async function ensureJobOwnership(job, currentTpoId) {
   if (!job) return false;
   if (!job.createdByTpo || String(job.createdByTpo) === String(currentTpoId)) {
@@ -42,6 +48,7 @@ async function ensureJobOwnership(job, currentTpoId) {
   return true;
 }
 
+// Validate eligibility rules and create a new job application for the student.
 async function applyToJob(req, res) {
   const { jobId } = req.params;
 
@@ -62,7 +69,7 @@ async function applyToJob(req, res) {
     return res.status(400).json({ message: "Deadline passed" });
   }
 
-  const eligibleCourses = parseEligibilityCourses(job.eligibility);
+  const eligibleCourses = parseEligibilityCourses(job.eligibilityCourses?.length ? job.eligibilityCourses : job.eligibility);
   if (!matchesEligibleCourse(student.department, eligibleCourses)) {
     return res.status(403).json({ message: "You cannot apply. Your course does not match the job eligibility." });
   }
@@ -82,6 +89,7 @@ async function applyToJob(req, res) {
   }
 }
 
+// Return the applications submitted by the logged-in student.
 async function myApplications(req, res) {
   const apps = await Application.find({ student: req.user.id })
     .populate("job")
@@ -89,6 +97,7 @@ async function myApplications(req, res) {
   res.json(apps);
 }
 
+// List applicants for a job, with optional filtering by placement session.
 async function applicationsForJob(req, res) {
   const { jobId } = req.params;
   const placementYear = normalizePlacementYear(req.query.placementYear);
@@ -106,6 +115,7 @@ async function applicationsForJob(req, res) {
   res.json(filtered);
 }
 
+// Update the applicant status and keep placement or interview records in sync.
 async function updateApplicationStatus(req, res) {
   const { applicationId } = req.params;
   const { status, note } = req.body;
@@ -147,6 +157,7 @@ async function updateApplicationStatus(req, res) {
   res.json(app);
 }
 
+// Export the applicant list for a job as a CSV report.
 async function downloadApplicantsReport(req, res) {
   const { jobId } = req.params;
   const placementYear = normalizePlacementYear(req.query.placementYear);

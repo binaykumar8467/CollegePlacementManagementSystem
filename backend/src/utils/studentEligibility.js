@@ -1,3 +1,4 @@
+// Contains helper logic for profile completeness and job or drive eligibility checks.
 function normalizeCourseValue(value) {
   return String(value || "")
     .trim()
@@ -5,13 +6,21 @@ function normalizeCourseValue(value) {
     .replace(/\s+/g, " ");
 }
 
+// Split the job eligibility text into comparable course values.
 function parseEligibilityCourses(rawEligibility) {
+  if (Array.isArray(rawEligibility)) {
+    return rawEligibility
+      .map((item) => String(item || "").trim())
+      .filter(Boolean);
+  }
+
   return String(rawEligibility || "")
     .split(/[,/\n|]+/)
     .map((item) => String(item || "").trim())
     .filter(Boolean);
 }
 
+// Check whether the student profile has the required fields for placements.
 function isStudentProfileComplete(student) {
   if (!student) return false;
 
@@ -37,6 +46,7 @@ function isStudentProfileComplete(student) {
   return false;
 }
 
+// Compare the student course with the allowed course list.
 function matchesEligibleCourse(studentDepartment, eligibleCourses) {
   const normalizedStudentCourse = normalizeCourseValue(studentDepartment);
   if (!normalizedStudentCourse) return false;
@@ -50,6 +60,7 @@ function matchesEligibleCourse(studentDepartment, eligibleCourses) {
 }
 
 module.exports = {
+  normalizeCourseValue,
   parseEligibilityCourses,
   isStudentProfileComplete,
   matchesEligibleCourse,

@@ -1,9 +1,11 @@
+// Formats and normalizes placement session values used across the project.
 function toAcademicYear(startYear) {
   const start = Number(startYear);
   if (!Number.isInteger(start)) return "";
   return `${start}-${start + 1}`;
 }
 
+// Normalize placement-session input into the project format.
 function normalizePlacementYear(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -22,10 +24,12 @@ function normalizePlacementYear(value) {
   return "";
 }
 
+// Return the current placement session based on today’s date.
 function getCurrentPlacementYear() {
   return toAcademicYear(new Date().getFullYear());
 }
 
+// Build a reusable list of placement-session options for forms.
 function getPlacementYearOptions() {
   const currentYear = new Date().getFullYear();
   return Array.from({ length: 5 }, (_, index) => toAcademicYear(currentYear + index));

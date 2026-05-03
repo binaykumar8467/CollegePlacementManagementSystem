@@ -1,3 +1,4 @@
+// Configures the frontend API client used to communicate with the backend.
 import axios from "axios";
 import { getToken } from "./auth";
 

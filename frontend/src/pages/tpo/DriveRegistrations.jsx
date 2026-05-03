@@ -1,3 +1,4 @@
+// Lets TPO users review drive registrations, update status, and export reports.
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../../lib/api";
@@ -7,18 +8,22 @@ import { COURSE_OPTIONS, getCurrentPlacementYear, getPlacementYearOptions } from
 const statuses = ["REGISTERED", "SHORTLISTED", "REJECTED", "SELECTED"];
 const defaultSchedule = { round: "Round 1", dateTime: "", mode: "OFFLINE", location: "", note: "" };
 
+// Read registration details from the live student record or saved snapshot.
 function getStudentView(item) {
   return item?.student || item?.studentSnapshot || {};
 }
 
+// Convert stored date values into the browser datetime-local input format.
 function toInputDateTime(value) {
   if (!value) return "";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return "";
+// Handle the pad logic used in this file.
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+// Render the drive-registration management page for one drive.
 export default function DriveRegistrations() {
   const { driveId } = useParams();
   const [items, setItems] = useState([]);
@@ -58,6 +63,7 @@ export default function DriveRegistrations() {
   }, [items, searchTerm, branchFilter]);
   const allVisibleSelected = filteredItems.length > 0 && filteredItems.every((item) => selectedIds.includes(item._id));
 
+// Load  data needed by this screen.
   const load = () => {
     setErr("");
     setMsg("");
@@ -77,6 +83,7 @@ export default function DriveRegistrations() {
 
   useEffect(() => { load(); }, [driveId, placementYear]);
 
+// Update  status data for the current flow.
   const updateStatus = async (registrationId, status, noteValue = noteDrafts[registrationId] || "") => {
     if (status === "SHORTLISTED") {
       const existing = interviewMap.get(String(registrationId));
@@ -108,6 +115,7 @@ export default function DriveRegistrations() {
     }
   };
 
+// Handle the shortlist only logic used in this file.
   const shortlistOnly = async (registrationId) => {
     setErr("");
     setMsg("");
@@ -123,11 +131,13 @@ export default function DriveRegistrations() {
     }
   };
 
+// Open  schedule content for the current user.
   const openSchedule = (registrationId) => {
     setShortlistChoiceFor("");
     setScheduleFor(registrationId);
   };
 
+// Save  interview data for later reuse.
   const saveInterview = async (registrationId) => {
     if (!form.dateTime) {
       setErr("Interview date & time required");
@@ -149,6 +159,7 @@ export default function DriveRegistrations() {
     }
   };
 
+// Convert this value into the format expected by the UI or API.
   const toggleSelected = (registrationId) => {
     setSelectedIds((current) => (
       current.includes(registrationId)
@@ -157,6 +168,7 @@ export default function DriveRegistrations() {
     ));
   };
 
+// Convert this value into the format expected by the UI or API.
   const toggleSelectAllVisible = () => {
     if (allVisibleSelected) {
       setSelectedIds((current) => current.filter((id) => !filteredItems.some((item) => item._id === id)));
@@ -165,10 +177,12 @@ export default function DriveRegistrations() {
     setSelectedIds((current) => Array.from(new Set([...current, ...filteredItems.map((item) => item._id)])));
   };
 
+// Clear  selection data from the current session.
   const clearSelection = () => {
     setSelectedIds([]);
   };
 
+// Save  note data for later reuse.
   const saveNote = async (registrationId) => {
     const registration = items.find((item) => item._id === registrationId);
     if (!registration) return;
@@ -177,6 +191,7 @@ export default function DriveRegistrations() {
     setNoteFor("");
   };
 
+// Handle the bulk update status logic used in this file.
   const bulkUpdateStatus = async () => {
     if (!selectedIds.length) return;
     const ok = window.confirm(`Change status to ${bulkStatus} for ${selectedIds.length} selected registrations?`);
@@ -192,6 +207,7 @@ export default function DriveRegistrations() {
     }
   };
 
+// Prepare and download  data as a report.
   const download = async () => {
     setErr("");
     setMsg("");

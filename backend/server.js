@@ -1,3 +1,4 @@
+// Starts the Express server, connects MongoDB, and mounts all API routes.
 const express = require("express");
 const path = require("path");
 const fs = require("fs");
@@ -62,9 +63,9 @@ const PORT = process.env.PORT || 4518;
 
 connectDB()
   .then(() => {
-    app.listen(PORT, () => console.log(`✅ Server running on http://localhost:${PORT}`));
+    app.listen(PORT, () => console.log(`âœ… Server running on http://localhost:${PORT}`));
   })
   .catch((err) => {
-    console.error("❌ DB connection failed:", err.message);
+    console.error("âŒ DB connection failed:", err.message);
     process.exit(1);
   });

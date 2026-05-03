@@ -1,3 +1,4 @@
+// Displays quick navigation links for the available login options.
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -33,12 +34,14 @@ const MENU_CONFIG = {
   }
 };
 
+// Render the shortcut links for login and signup navigation.
 export default function LoginMenu({ className = "", variant = "login" }) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef(null);
   const menu = MENU_CONFIG[variant] || MENU_CONFIG.login;
 
   useEffect(() => {
+// Handle the handle click outside logic used in this file.
     const handleClickOutside = (event) => {
       if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
         setOpen(false);

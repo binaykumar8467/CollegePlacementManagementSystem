@@ -1,13 +1,16 @@
+// Shows full details of a selected drive and handles drive registration actions.
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../lib/api";
 import { getRole, getUser } from "../lib/auth";
 import BackButton from "../components/BackButton";
 
+// Normalize course names before comparing drive eligibility.
 function normalizeCourseValue(value) {
   return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+// Check whether the student profile is complete enough for drive registration.
 function isProfileComplete(user) {
   if (!user) return false;
   const hasBasicDetails = Boolean(
@@ -22,12 +25,14 @@ function isProfileComplete(user) {
   return false;
 }
 
+// Compare the student course with the drive eligibility list.
 function matchesEligibleCourse(studentCourse, eligibleCourses) {
   if (!Array.isArray(eligibleCourses) || !eligibleCourses.length) return true;
   const normalizedStudentCourse = normalizeCourseValue(studentCourse);
   return eligibleCourses.map(normalizeCourseValue).includes(normalizedStudentCourse);
 }
 
+// Render the drive details page and handle drive registration actions.
 export default function DriveDetails() {
   const { driveId } = useParams();
   const navigate = useNavigate();
@@ -44,16 +49,18 @@ export default function DriveDetails() {
       .catch(e => setErr(e?.response?.data?.message || "Failed to load drive"));
   }, [driveId]);
 
+// Handle the register logic used in this file.
   const register = async () => {
     setErr(""); setMsg("");
     try {
       await api.post(`/api/drives/${driveId}/register`);
-      setMsg("✅ Registered for drive!");
+      setMsg("âœ… Registered for drive!");
     } catch (e) {
       setErr(e?.response?.data?.message || "Register failed");
     }
   };
 
+// Delete  drive data for the current flow.
   const deleteDrive = async () => {
     const ok = window.confirm("Delete this drive?");
     if (!ok) return;
@@ -88,7 +95,7 @@ export default function DriveDetails() {
         <div className="row" style={{ justifyContent:"space-between" }}>
           <div>
             <h2>{drive.title}</h2>
-            <small className="muted">{drive.company} • {new Date(drive.dateTime).toLocaleString()}</small>
+            <small className="muted">{drive.company} â€¢ {new Date(drive.dateTime).toLocaleString()}</small>
           </div>
           <BackButton fallback="/drives" label="Back" />
         </div>

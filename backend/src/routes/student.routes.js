@@ -1,3 +1,4 @@
+// Declares API routes for student profiles, approvals, uploads, and reports.
 const router = require("express").Router();
 const { authRequired, requireRole } = require("../middleware/auth.middleware");
 const ctrl = require("../controllers/student.controller");

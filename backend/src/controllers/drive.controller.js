@@ -1,3 +1,4 @@
+// Manages campus drives, registrations, eligibility checks, and drive reports.
 const Drive = require("../models/Drive");
 const DriveRegistration = require("../models/DriveRegistration");
 const Placement = require("../models/Placement");
@@ -6,6 +7,7 @@ const { normalizePlacementYear } = require("../utils/placementYear");
 const { buildStudentSnapshot } = require("../utils/studentSnapshot");
 const { isStudentProfileComplete, matchesEligibleCourse } = require("../utils/studentEligibility");
 
+// Add Excel-friendly formatting so drive reports open correctly.
 function excelCsv(csvBody) {
   const bom = "\ufeff";
   const sep = "sep=,\r\n";
@@ -13,16 +15,19 @@ function excelCsv(csvBody) {
   return bom + sep + body;
 }
 
+// Escape commas, quotes, and line breaks before writing CSV values.
 function csvEscape(v) {
   const s = String(v ?? "");
   if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
 
+// Read student data from the live relation or the saved snapshot.
 function getStudentDetails(registration) {
   return registration?.student || registration?.studentSnapshot || {};
 }
 
+// Make sure only the owning TPO can manage this drive and its registrations.
 async function ensureDriveOwnership(drive, currentTpoId) {
   if (!drive) return false;
   if (!drive.createdByTpo || String(drive.createdByTpo) === String(currentTpoId)) {
@@ -36,11 +41,13 @@ async function ensureDriveOwnership(drive, currentTpoId) {
   return true;
 }
 
+// Return the available campus drives in date order.
 async function listDrives(req, res) {
   const drives = await Drive.find().sort({ dateTime: 1 }).lean();
   res.json(drives);
 }
 
+// Normalize the drive form data before it is stored in MongoDB.
 function normalizeDrivePayload(body) {
   const { title, company, dateTime, venue, description, eligibleDepartments, minCgpa, minPercentage, jobIds } = body;
   const normalizedDepartments = Array.isArray(eligibleDepartments)
@@ -60,6 +67,7 @@ function normalizeDrivePayload(body) {
   };
 }
 
+// Create a new campus drive for the logged-in TPO.
 async function createDrive(req, res) {
   const { title, company, dateTime } = req.body;
   if (!title || !company || !dateTime) return res.status(400).json({ message: "title, company, dateTime required" });
@@ -72,6 +80,7 @@ async function createDrive(req, res) {
   res.status(201).json(drive);
 }
 
+// Update the selected campus drive after validating ownership.
 async function updateDrive(req, res) {
   const { driveId } = req.params;
   const { title, company, dateTime } = req.body;
@@ -86,6 +95,7 @@ async function updateDrive(req, res) {
   res.json(drive);
 }
 
+// Delete a drive and remove its related registrations.
 async function deleteDrive(req, res) {
   const { driveId } = req.params;
   const drive = await Drive.findById(driveId);
@@ -97,6 +107,7 @@ async function deleteDrive(req, res) {
   res.json({ message: "Drive deleted successfully" });
 }
 
+// Check student eligibility rules and create a drive registration.
 async function registerForDrive(req, res) {
   const { driveId } = req.params;
   const student = await Student.findById(req.user.id);
@@ -138,11 +149,13 @@ async function registerForDrive(req, res) {
   }
 }
 
+// Return the drives registered by the logged-in student.
 async function myDriveRegistrations(req, res) {
   const regs = await DriveRegistration.find({ student: req.user.id }).populate("drive").sort({ createdAt: -1 });
   res.json(regs);
 }
 
+// List student registrations for a drive, with optional session filtering.
 async function driveRegistrations(req, res) {
   const { driveId } = req.params;
   const placementYear = normalizePlacementYear(req.query.placementYear);
@@ -159,6 +172,7 @@ async function driveRegistrations(req, res) {
   res.json(filtered);
 }
 
+// Update a drive registration status and keep placement records in sync.
 async function updateRegistrationStatus(req, res) {
   const { regId } = req.params;
   const { status, note } = req.body;
@@ -197,6 +211,7 @@ async function updateRegistrationStatus(req, res) {
   res.json(reg);
 }
 
+// Export the registration list for one drive as a CSV report.
 async function downloadDriveReport(req, res) {
   const { driveId } = req.params;
   const placementYear = normalizePlacementYear(req.query.placementYear);
@@ -229,6 +244,7 @@ async function downloadDriveReport(req, res) {
   return res.status(200).send(excelCsv(csv));
 }
 
+// Export the overall drive summary for the logged-in TPO.
 async function downloadDrivesSummaryReport(req, res) {
   const drives = await Drive.find({ createdByTpo: req.user.id }).sort({ createdAt: -1 }).lean();
   const regCounts = await DriveRegistration.aggregate([{ $group: { _id: "$drive", total: { $sum: 1 } } }]);

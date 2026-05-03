@@ -1,7 +1,9 @@
+// Shows the drives registered by the logged-in student.
 import React, { useEffect, useState } from "react";
 import api from "../../lib/api";
 import BackButton from "../../components/BackButton";
 
+// Render the student drive-history page and load registered drives.
 export default function MyDrives() {
   const [items, setItems] = useState([]);
   const [err, setErr] = useState("");

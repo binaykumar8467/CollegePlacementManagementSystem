@@ -1,3 +1,4 @@
+// Displays the TPO dashboard with placement management shortcuts and summaries.
 import React, { useEffect, useState } from "react";
 import api from "../../lib/api";
 import { getUser } from "../../lib/auth";
@@ -9,6 +10,7 @@ const dashboardCardStyle = {
   backdropFilter: "blur(10px)"
 };
 
+// Render a reusable dashboard shortcut card for TPO users.
 function QuickLink({ title, subtitle, to, actions }) {
   return (
     <div className="card quick-link-card" style={dashboardCardStyle}>
@@ -23,6 +25,7 @@ function QuickLink({ title, subtitle, to, actions }) {
   );
 }
 
+// Render the TPO dashboard and load high-level management summaries.
 export default function TpoDashboard() {
   const user = getUser();
   const [jobs, setJobs] = useState([]);
@@ -31,6 +34,7 @@ export default function TpoDashboard() {
   const [placements, setPlacements] = useState([]);
   const [err, setErr] = useState("");
 
+// Load  dashboard data needed by this screen.
   const loadDashboard = async () => {
     try {
       const [jobsRes, drivesRes, noticesRes, placementsRes] = await Promise.all([
@@ -59,7 +63,7 @@ export default function TpoDashboard() {
         <div className="row" style={{ justifyContent: "space-between" }}>
           <div>
             <h2>TPO Dashboard</h2>
-            <small className="muted">{user?.name} • {user?.email}</small>
+            <small className="muted">{user?.name} â€¢ {user?.email}</small>
           </div>
           <div className="row">
             <Link className="btn" to="/tpo/jobs/new" state={{ from: "/tpo/dashboard" }}>+ Job</Link>
@@ -125,7 +129,7 @@ export default function TpoDashboard() {
           <div className="kpi" style={{ boxShadow: "0 18px 36px rgba(0, 33, 71, 0.12)", border: "1px solid rgba(0, 33, 71, 0.24)", backdropFilter: "blur(10px)" }}>
             <strong>Quick Summary</strong>
             <div style={{ marginTop: 8 }}>
-              <small className="muted">Jobs: {jobs.length} • Drives: {drives.length} • Notices: {notices.length} • Placements: {placements.length}</small>
+              <small className="muted">Jobs: {jobs.length} â€¢ Drives: {drives.length} â€¢ Notices: {notices.length} â€¢ Placements: {placements.length}</small>
             </div>
           </div>
         </div>

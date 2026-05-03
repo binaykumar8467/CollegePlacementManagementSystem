@@ -1,15 +1,18 @@
+// Renders the student login form and submits student login requests.
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
 import { saveAuth } from "../../lib/auth";
 import { validateEmailOrPhone, validatePassword } from "../../lib/signupValidation";
 
+// Render the student login page and handle authentication.
 export default function StudentLogin() {
   const nav = useNavigate();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
 
+// Handle the on change identifier logic used in this file.
   const onChangeIdentifier = (value) => {
     setIdentifier(value);
     if (err) {
@@ -19,6 +22,7 @@ export default function StudentLogin() {
     }
   };
 
+// Handle the on change password logic used in this file.
   const onChangePassword = (value) => {
     setPassword(value);
     if (err) {
@@ -28,6 +32,7 @@ export default function StudentLogin() {
     }
   };
 
+// Handle the submit logic used in this file.
   const submit = async (e) => {
     e.preventDefault();
     setErr("");

@@ -1,9 +1,11 @@
+// Handles student profile updates, approvals, document uploads, and student reports.
 const Student = require("../models/Student");
 const Application = require("../models/Application");
 const DriveRegistration = require("../models/DriveRegistration");
 const { ensureUniqueIdentity, normalizePhone } = require("../utils/identity");
 const { normalizePlacementYear } = require("../utils/placementYear");
 
+// Remove sensitive fields before sending student data back to the client.
 function sanitize(st) {
   const o = st.toObject();
   delete o.password;
@@ -13,6 +15,7 @@ function sanitize(st) {
   return o;
 }
 
+// Clean semester percentage inputs before calculating or saving them.
 function normalizeSemesterValues(semesterPercentages) {
   const values = Array.isArray(semesterPercentages)
     ? semesterPercentages.slice(0, 8).map((x) => (typeof x === "string" ? x.trim() : x))
@@ -43,6 +46,7 @@ function normalizeSemesterValues(semesterPercentages) {
     .filter((x) => Number.isFinite(x));
 }
 
+// Calculate the average percentage from the completed semesters.
 function calculateOverallPercentage(semesterPercentages) {
   const values = normalizeSemesterValues(semesterPercentages);
   if (!values.length) return null;
@@ -50,28 +54,33 @@ function calculateOverallPercentage(semesterPercentages) {
   return Number((total / values.length).toFixed(2));
 }
 
+// Add Excel-friendly formatting so student reports open correctly.
 function excelCsv(csvBody) {
   return "\ufeffsep=,\r\n" + String(csvBody).replace(/\r?\n/g, "\r\n");
 }
 
+// Escape commas, quotes, and line breaks before writing CSV values.
 function csvEscape(v) {
   const s = String(v ?? "");
   if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
 
+// Force Excel to keep text fields like phone and roll number unchanged.
 function excelText(v) {
   const s = String(v ?? "");
   if (!s) return "";
   return `="${s.replace(/"/g, '""')}"`;
 }
 
+// Save a trimmed string field or clear it when the input is empty.
 function setStringOrUnset(doc, field, value) {
   if (typeof value !== "string") return;
   const trimmed = value.trim();
   doc[field] = trimmed || undefined;
 }
 
+// Save a numeric field or clear it when no valid number is provided.
 function setNumberOrUnset(doc, field, value) {
   if (value === "" || value === null || typeof value === "undefined") {
     doc[field] = undefined;
@@ -84,6 +93,7 @@ function setNumberOrUnset(doc, field, value) {
   return true;
 }
 
+// Return students, with optional filtering by placement session.
 async function listStudents(req, res) {
   const requestedPlacementYear = normalizePlacementYear(req.query.placementYear);
   const students = await Student.find()
@@ -96,6 +106,7 @@ async function listStudents(req, res) {
   res.json(filtered);
 }
 
+// Export student records as a CSV report.
 async function downloadStudentsReport(req, res) {
   const requestedPlacementYear = normalizePlacementYear(req.query.placementYear);
   const students = await Student.find()
@@ -119,6 +130,7 @@ async function downloadStudentsReport(req, res) {
   return res.status(200).send(excelCsv(csv));
 }
 
+// Approve or reject a student for placement participation.
 async function setApproval(req, res) {
   const { studentId } = req.params;
   const { isApproved, approvalNote } = req.body;
@@ -133,6 +145,7 @@ async function setApproval(req, res) {
   res.json(sanitize(st));
 }
 
+// Validate and save the logged-in student profile details.
 async function updateMyProfile(req, res) {
   const { rollNo, department, year, phone, skills, resumeLink, semesterPercentages, cgpa, gradingSystem, class10Percentage, class12Percentage } = req.body;
 
@@ -202,6 +215,7 @@ async function updateMyProfile(req, res) {
   res.json(sanitize(st));
 }
 
+// Store the student resume PDF inside the student record.
 async function uploadMyResume(req, res) {
   const st = await Student.findById(req.user.id);
   if (!st) return res.status(404).json({ message: "Student not found" });
@@ -215,6 +229,7 @@ async function uploadMyResume(req, res) {
   res.json(sanitize(st));
 }
 
+// Store the student profile photo inside the student record.
 async function uploadMyPhoto(req, res) {
   const st = await Student.findById(req.user.id);
   if (!st) return res.status(404).json({ message: "Student not found" });
@@ -228,6 +243,7 @@ async function uploadMyPhoto(req, res) {
   res.json(sanitize(st));
 }
 
+// Stream the stored resume file back to the browser.
 async function viewResume(req, res) {
   const { studentId } = req.params;
   const st = await Student.findById(studentId).select("resumeData resumeMimeType resumeFileName name");
@@ -238,6 +254,7 @@ async function viewResume(req, res) {
   return res.send(st.resumeData);
 }
 
+// Stream the stored profile photo back to the browser.
 async function viewPhoto(req, res) {
   const { studentId } = req.params;
   const st = await Student.findById(studentId).select("profilePhotoData profilePhotoMimeType profilePhotoFileName name");
@@ -249,6 +266,7 @@ async function viewPhoto(req, res) {
   return res.send(st.profilePhotoData);
 }
 
+// Delete a student account and remove its related applications and registrations.
 async function deleteStudent(req, res) {
   const { studentId } = req.params;
   const deleted = await Student.findByIdAndDelete(studentId);

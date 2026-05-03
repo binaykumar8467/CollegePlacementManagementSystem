@@ -1,8 +1,10 @@
+// Shows interview schedules assigned to the logged-in student.
 import React, { useEffect, useState } from "react";
 import api from "../../lib/api";
 import BackButton from "../../components/BackButton";
 import { latestTimestamp, markModuleSeen, MODULE_KEYS } from "../../lib/notifications";
 
+// Render the student interview page and load scheduled interviews.
 export default function StudentInterviews() {
   const [items, setItems] = useState([]);
   const [err, setErr] = useState("");

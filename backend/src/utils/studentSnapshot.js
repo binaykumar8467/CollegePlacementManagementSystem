@@ -1,3 +1,4 @@
+// Builds a student snapshot so records keep student details even after profile updates.
 function buildStudentSnapshot(student) {
   if (!student) return {};
 

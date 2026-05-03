@@ -1,18 +1,22 @@
+// Shows a helper message when an authenticated user reaches a guest-only page.
 
 import React from "react";
 import { Link } from "react-router-dom";
 import { clearAuth, getAuth } from "../lib/auth";
 
+// Choose the correct dashboard route for the logged-in role.
 function dashboardFor(role) {
   if (role === "student") return "/student/dashboard";
   if (role === "tpo") return "/tpo/dashboard";
   return "/";
 }
 
+// Show a helpful message when an authenticated user opens a guest-only page.
 export default function AlreadyLoggedIn({ targetRole }) {
   const auth = getAuth();
   const currentRole = auth?.role || "user";
 
+// Handle the logout logic used in this file.
   const logout = () => {
     clearAuth();
     window.location.href = targetRole === "tpo" ? "/tpo/login" : "/student/login";

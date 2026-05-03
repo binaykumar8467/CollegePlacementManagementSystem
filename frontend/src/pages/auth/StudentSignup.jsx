@@ -1,3 +1,4 @@
+// Renders the student signup form with OTP verification based registration.
 import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../lib/api";
@@ -9,6 +10,7 @@ const EMPTY_FIELD_ERRORS = { name: "", email: "", password: "", placementYear: "
 const EMPTY_TOUCHED = { name: false, email: false, password: false, placementYear: false, phone: false };
 const OTP_RESEND_COOLDOWN_SECONDS = 30;
 
+// Render the student signup page and handle OTP-based registration.
 export default function StudentSignup() {
   const nav = useNavigate();
   const placementYears = useMemo(() => getPlacementYearOptions(), []);
@@ -41,17 +43,20 @@ export default function StudentSignup() {
     return () => window.clearTimeout(timer);
   }, [otpCooldown]);
 
+// Handle the reset verification logic used in this file.
   const resetVerification = () => {
     setVerification(EMPTY_VERIFICATION);
     setOtp("");
   };
 
+// Handle the show email field error logic used in this file.
   const showEmailFieldError = (message = "Enter a valid email address") => {
     setTouched((s) => ({ ...s, email: true }));
     setFieldErrors((s) => ({ ...s, email: message }));
     setErr("");
   };
 
+// Handle the on change logic used in this file.
   const onChange = (k, v) => {
     const nextForm = { ...form, [k]: v };
     setForm(nextForm);
@@ -66,11 +71,13 @@ export default function StudentSignup() {
     }
   };
 
+// Handle the on blur logic used in this file.
   const onBlur = (k) => {
     setTouched((s) => ({ ...s, [k]: true }));
     setFieldErrors((s) => ({ ...s, [k]: validateStudentField(k, form[k]) }));
   };
 
+// Handle the send otp logic used in this file.
   const sendOtp = async () => {
     if (otpCooldown > 0) {
       return;
@@ -101,6 +108,7 @@ export default function StudentSignup() {
     }
   };
 
+// Verify  otp data before continuing the flow.
   const verifyOtp = async () => {
     if (!verification.signupToken) {
       setErr("Send OTP first");
@@ -127,6 +135,7 @@ export default function StudentSignup() {
     }
   };
 
+// Handle the submit logic used in this file.
   const submit = async (e) => {
     e.preventDefault();
     setErr("");

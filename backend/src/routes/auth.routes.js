@@ -1,3 +1,4 @@
+// Declares authentication routes for student and TPO account flows.
 const router = require("express").Router();
 const ctrl = require("../controllers/auth.controller");
 const asyncHandler = require("../utils/asyncHandler");

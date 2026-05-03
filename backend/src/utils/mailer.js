@@ -1,7 +1,9 @@
+// Sends OTP and account notification messages through configured messaging services.
 function hasEmailConfig() {
   return Boolean(process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL);
 }
 
+// Build the sender identity used in outgoing emails.
 function getSender() {
   return {
     name: process.env.BREVO_SENDER_NAME || "CPMS Placement Cell",
@@ -9,6 +11,7 @@ function getSender() {
   };
 }
 
+// Send an email through the Brevo transactional email API.
 async function sendBrevoEmail({ toEmail, recipientName, subject, text, html }) {
   if (!hasEmailConfig()) {
     console.log(`[DEV EMAIL] ${toEmail}: ${subject}`);
@@ -39,6 +42,7 @@ async function sendBrevoEmail({ toEmail, recipientName, subject, text, html }) {
   return { delivered: true, previewOnly: false };
 }
 
+// Send the password-reset OTP email to the student.
 async function sendStudentPasswordResetOtp({ toEmail, studentName, otp }) {
   return sendOtpEmail({
     toEmail,
@@ -51,6 +55,7 @@ async function sendStudentPasswordResetOtp({ toEmail, studentName, otp }) {
   });
 }
 
+// Build and send a reusable OTP email message.
 async function sendOtpEmail({ toEmail, recipientName, otp, subject, heading, intro, ignoreText }) {
   const text = `Hello ${recipientName || "User"}, ${intro} ${otp}. It will expire in 10 minutes.`;
 
@@ -72,6 +77,7 @@ async function sendOtpEmail({ toEmail, recipientName, otp, subject, heading, int
   });
 }
 
+// Send an OTP SMS through the configured SMS service.
 async function sendOtpSms({ toPhone, recipientName, otp, messagePrefix }) {
   if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_FROM_NUMBER) {
     console.log(`[DEV SMS OTP] ${toPhone}: ${otp}`);
@@ -102,6 +108,7 @@ async function sendOtpSms({ toPhone, recipientName, otp, messagePrefix }) {
   return { delivered: true, previewOnly: false };
 }
 
+// Send the signup OTP email for account verification.
 async function sendSignupOtpEmail({ toEmail, recipientName, otp, roleLabel }) {
   return sendOtpEmail({
     toEmail,
@@ -114,6 +121,7 @@ async function sendSignupOtpEmail({ toEmail, recipientName, otp, roleLabel }) {
   });
 }
 
+// Send a signup success email after the account is created.
 async function sendSignupSuccessEmail({ toEmail, recipientName, roleLabel }) {
   return sendBrevoEmail({
     toEmail,
@@ -131,6 +139,7 @@ async function sendSignupSuccessEmail({ toEmail, recipientName, roleLabel }) {
   });
 }
 
+// Send a signup success SMS after the account is created.
 async function sendSignupSuccessSms({ toPhone, recipientName, roleLabel }) {
   if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_FROM_NUMBER) {
     console.log(`[DEV SMS] Signup success notification queued for ${toPhone}`);

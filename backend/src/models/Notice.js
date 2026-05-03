@@ -1,3 +1,4 @@
+// Defines the MongoDB schema for notices shown in the portal.
 const mongoose = require("mongoose");
 const { getCurrentPlacementYear } = require("../utils/placementYear");
 

@@ -1,3 +1,4 @@
+// Defines the MongoDB schema for interview schedules and interview details.
 const mongoose = require("mongoose");
 
 const interviewSchema = new mongoose.Schema(

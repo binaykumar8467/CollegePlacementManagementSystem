@@ -1,7 +1,10 @@
+// Manages job CRUD operations and downloadable job summary reports.
 const Job = require("../models/Job");
 const Application = require("../models/Application");
 const Interview = require("../models/Interview");
+const { parseEligibilityCourses } = require("../utils/studentEligibility");
 
+// Make sure only the owning TPO can manage this job.
 async function ensureJobOwnership(job, currentTpoId) {
   if (!job) return false;
   if (!job.createdByTpo || String(job.createdByTpo) === String(currentTpoId)) {
@@ -15,46 +18,60 @@ async function ensureJobOwnership(job, currentTpoId) {
   return true;
 }
 
+// Add Excel-friendly formatting so exported CSV files open correctly.
 function excelCsv(csvBody) {
   return "\ufeffsep=,\r\n" + String(csvBody).replace(/\r?\n/g, "\r\n");
 }
+// Escape commas, quotes, and line breaks before writing CSV values.
 function csvEscape(v) {
   const s = String(v ?? "");
   if (/[",\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
   return s;
 }
 
+// Normalize selected eligibility courses before storing them in the job record.
+function normalizeEligibilityCourses(value) {
+  return [...new Set(parseEligibilityCourses(value))];
+}
+
+// Return the available job postings in reverse creation order.
 async function listJobs(req, res) {
   const jobs = await Job.find().sort({ createdAt: -1 }).lean();
   res.json(jobs);
 }
 
+// Return the full details of one job posting.
 async function getJob(req, res) {
   const job = await Job.findById(req.params.jobId);
   if (!job) return res.status(404).json({ message: "Job not found" });
   res.json(job);
 }
 
+// Create a new job posting for the logged-in TPO.
 async function createJob(req, res) {
-  const { title, company, location, salary, description, eligibility, deadline } = req.body;
+  const { title, company, location, salary, description, eligibilityCourses, deadline } = req.body;
   if (!title || !company || !deadline) return res.status(400).json({ message: "title, company, deadline required" });
+  const normalizedEligibilityCourses = normalizeEligibilityCourses(eligibilityCourses);
 
   const job = await Job.create({
     title, company,
     location: location || "",
     salary: salary || "",
     description: description || "",
-    eligibility: eligibility || "",
+    eligibilityCourses: normalizedEligibilityCourses,
+    eligibility: normalizedEligibilityCourses.join(", "),
     deadline: new Date(deadline),
     createdByTpo: req.user.id
   });
   res.status(201).json(job);
 }
 
+// Update an existing job posting after validating ownership.
 async function updateJob(req, res) {
   const { jobId } = req.params;
-  const { title, company, location, salary, description, eligibility, deadline } = req.body;
+  const { title, company, location, salary, description, eligibilityCourses, deadline } = req.body;
   if (!title || !company || !deadline) return res.status(400).json({ message: "title, company, deadline required" });
+  const normalizedEligibilityCourses = normalizeEligibilityCourses(eligibilityCourses);
 
   const job = await Job.findById(jobId);
   if (!job) return res.status(404).json({ message: "Job not found" });
@@ -65,13 +82,15 @@ async function updateJob(req, res) {
   job.location = location || "";
   job.salary = salary || "";
   job.description = description || "";
-  job.eligibility = eligibility || "";
+  job.eligibilityCourses = normalizedEligibilityCourses;
+  job.eligibility = normalizedEligibilityCourses.join(", ");
   job.deadline = new Date(deadline);
   await job.save();
 
   res.json(job);
 }
 
+// Delete a job and clean up its applications and interviews.
 async function deleteJob(req, res) {
   const { jobId } = req.params;
   const job = await Job.findById(jobId);
@@ -86,6 +105,7 @@ async function deleteJob(req, res) {
   res.json({ message: "Job deleted successfully" });
 }
 
+// Export the job summary for the logged-in TPO as a CSV report.
 async function downloadJobsReport(req, res) {
   const jobs = await Job.find({ createdByTpo: req.user.id }).sort({ createdAt: -1 }).lean();
   const appCounts = await Application.aggregate([{ $group: { _id: "$job", total: { $sum: 1 } } }]);

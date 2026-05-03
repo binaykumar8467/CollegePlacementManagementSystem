@@ -1,3 +1,4 @@
+// Defines the MongoDB schema for student drive registrations.
 const mongoose = require("mongoose");
 
 const studentSnapshotSchema = new mongoose.Schema(

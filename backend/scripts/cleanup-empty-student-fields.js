@@ -29,6 +29,7 @@ const nullableFields = [
 
 const emptyArrayFields = ["skills", "semesterPercentages"];
 
+// Handle the unset empty field logic used in this file.
 async function unsetEmptyField(field, emptyValue) {
   const result = await Student.updateMany(
     { [field]: emptyValue },
@@ -37,6 +38,7 @@ async function unsetEmptyField(field, emptyValue) {
   return result.modifiedCount || 0;
 }
 
+// Handle the run logic used in this file.
 async function run() {
   await connectDB();
   let updatedFields = 0;

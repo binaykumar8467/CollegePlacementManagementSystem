@@ -1,9 +1,11 @@
+// Lets students manage profile details, marks, resume, and profile photo.
 import React, { useEffect, useState } from "react";
 import api from "../../lib/api";
 import { getAuth, saveAuth } from "../../lib/auth";
 import BackButton from "../../components/BackButton";
 import { COURSE_OPTIONS, STUDY_YEAR_OPTIONS, formatPlacementYear } from "../../lib/studentOptions";
 
+// Clean semester percentage inputs before calculating the average.
 function normalizeSemesterValues(values) {
   if (!Array.isArray(values)) return [];
   return values
@@ -14,6 +16,7 @@ function normalizeSemesterValues(values) {
     .filter((x) => Number.isFinite(x) && x > 0);
 }
 
+// Calculate the overall percentage shown in the profile form.
 function averagePercentage(values) {
   const cleaned = normalizeSemesterValues(values);
   if (!cleaned.length) return "";
@@ -21,6 +24,7 @@ function averagePercentage(values) {
   return (total / cleaned.length).toFixed(2);
 }
 
+// Render the student profile page and manage profile updates and uploads.
 export default function StudentProfile() {
   const [refreshKey, setRefreshKey] = useState(0);
   const auth = getAuth();
@@ -37,11 +41,13 @@ export default function StudentProfile() {
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
 
+// Handle the on change logic used in this file.
   const onChange=(k,v)=>setForm(s=>({...s,[k]:v}));
   const computedPercentage = averagePercentage(form.semesterPercentages);
 
   useEffect(() => {
     let objectUrl = "";
+// Load  photo data needed by this screen.
     const loadPhoto = async () => {
       if (!user?._id || !user?.profilePhotoFile) {
         setPhotoPreviewUrl("");
@@ -61,6 +67,7 @@ export default function StudentProfile() {
     };
   }, [user?._id, user?.profilePhotoFile, refreshKey]);
 
+// Open  resume content for the current user.
   const openResume = async () => {
     if (!user?._id || !user?.resumeFile) return;
     setErr("");
@@ -74,11 +81,13 @@ export default function StudentProfile() {
     finally { setResumeViewing(false); }
   };
 
+// Open  photo content for the current user.
   const openPhoto = () => {
     if (!photoPreviewUrl) return;
     window.open(photoPreviewUrl, "_blank", "noopener,noreferrer");
   };
 
+// Save  data for later reuse.
   const save = async (e) => {
     e.preventDefault(); setErr(""); setMsg("");
     try {
@@ -96,6 +105,7 @@ export default function StudentProfile() {
     } catch (e2) { setErr(e2?.response?.data?.message || "Save failed"); }
   };
 
+// Handle the upload file logic used in this file.
   const uploadFile = async (kind, file) => {
     if (!file) return;
     setErr(''); setMsg('');

@@ -1,3 +1,4 @@
+// Handles student and TPO signup, login, OTP verification, and password reset flows.
 const Student = require("../models/Student");
 const Tpo = require("../models/Tpo");
 const PendingSignup = require("../models/PendingSignup");
@@ -16,6 +17,7 @@ const {
   sendSignupSuccessSms
 } = require("../utils/mailer");
 
+// Remove sensitive fields before sending user data back to the client.
 function sanitizeUser(user) {
   const obj = user.toObject();
   delete obj.password;
@@ -24,6 +26,7 @@ function sanitizeUser(user) {
   return obj;
 }
 
+// Return the current OTP verification progress for a pending signup.
 function getSignupVerificationState(record) {
   return {
     signupToken: record.signupToken,
@@ -33,6 +36,7 @@ function getSignupVerificationState(record) {
   };
 }
 
+// Generate and send the signup OTP through the selected communication channel.
 async function sendSignupOtpByChannel({ channel, record, roleLabel }) {
   if (channel !== "email") {
     const err = new Error("Only email OTP is supported");
@@ -54,6 +58,7 @@ async function sendSignupOtpByChannel({ channel, record, roleLabel }) {
   });
 }
 
+// Load the saved pending-signup record for OTP verification steps.
 async function getPendingSignupForVerification({ role, signupToken }) {
   if (!signupToken) {
     const err = new Error("Signup session not found. Request OTP again.");
@@ -74,6 +79,7 @@ async function getPendingSignupForVerification({ role, signupToken }) {
   return pending;
 }
 
+// Check the submitted OTP and mark the pending signup as verified.
 async function verifyPendingSignupOtp({ record, channel, otp }) {
   if (!["email", "phone"].includes(channel) || !otp) {
     const err = new Error("Valid OTP channel and otp required");
@@ -131,6 +137,7 @@ async function verifyPendingSignupOtp({ record, channel, otp }) {
   await record.save();
 }
 
+// Send success notifications after the account is created successfully.
 async function notifySignupSuccess({ email, phone, name, roleLabel }) {
   const tasks = [
     sendSignupSuccessEmail({ toEmail: email, recipientName: name, roleLabel }),
@@ -144,6 +151,7 @@ async function notifySignupSuccess({ email, phone, name, roleLabel }) {
   return warnings;
 }
 
+// Prepare normalized student signup data before saving it temporarily.
 function buildStudentPendingPayload(body) {
   return {
     role: "student",
@@ -155,6 +163,7 @@ function buildStudentPendingPayload(body) {
   };
 }
 
+// Validate the TPO signup request and decide whether it creates or updates the TPO account.
 async function resolveTpoSignupContext({ name, email, password, collegeName, phone, previousPassword }) {
   validateTpoSignupInput({ name, email, password, collegeName, phone });
 
@@ -182,6 +191,7 @@ async function resolveTpoSignupContext({ name, email, password, collegeName, pho
   return { matchedTpo };
 }
 
+// Prepare normalized TPO signup data before saving it temporarily.
 function buildTpoPendingPayload(body) {
   return {
     role: "tpo",
@@ -194,6 +204,7 @@ function buildTpoPendingPayload(body) {
   };
 }
 
+// Create or refresh the temporary signup record used during OTP verification.
 async function upsertPendingSignup(payload) {
   const existing = await PendingSignup.findOne({
     role: payload.role,
@@ -217,6 +228,7 @@ async function upsertPendingSignup(payload) {
   return PendingSignup.findById(created._id).select("+emailOtpHash +emailOtpExpiresAt +phoneOtpHash +phoneOtpExpiresAt");
 }
 
+// Validate the student form and send the signup OTP email.
 async function requestStudentSignupOtp(req, res) {
   validateStudentSignupInput(req.body);
   await ensureUniqueIdentity({ email: req.body.email, phone: req.body.phone });
@@ -230,6 +242,7 @@ async function requestStudentSignupOtp(req, res) {
   });
 }
 
+// Verify the student signup OTP before allowing final registration.
 async function verifyStudentSignupOtp(req, res) {
   const { signupToken, otp } = req.body;
   const pending = await getPendingSignupForVerification({ role: "student", signupToken });
@@ -241,6 +254,7 @@ async function verifyStudentSignupOtp(req, res) {
   });
 }
 
+// Create the final student account after OTP verification succeeds.
 async function studentSignup(req, res) {
   const pending = await getPendingSignupForVerification({ role: "student", signupToken: req.body.signupToken });
   if (!pending.emailVerified) {
@@ -278,6 +292,7 @@ async function studentSignup(req, res) {
   });
 }
 
+// Authenticate a student by email or phone and issue a JWT token.
 async function studentLogin(req, res) {
   const { identifier, email, phone, password } = req.body;
   const loginIdentifier = String(identifier || email || phone || "").trim();
@@ -293,6 +308,7 @@ async function studentLogin(req, res) {
   res.json({ token, user: sanitizeUser(student) });
 }
 
+// Start the student password-reset flow by sending an email OTP.
 async function studentForgotPassword(req, res) {
   const { email } = req.body;
   if (!email) {
@@ -320,6 +336,7 @@ async function studentForgotPassword(req, res) {
   });
 }
 
+// Verify the password-reset OTP and issue a short-lived reset token.
 async function verifyStudentForgotPasswordOtp(req, res) {
   const { email, otp } = req.body;
   if (!email || !otp) {
@@ -353,6 +370,7 @@ async function verifyStudentForgotPasswordOtp(req, res) {
   return res.json({ message: "OTP verified successfully", resetToken });
 }
 
+// Replace the student password after the reset session is verified.
 async function resetStudentPasswordWithOtp(req, res) {
   const { email, resetToken, newPassword } = req.body;
   if (!email || !resetToken || !newPassword) {
@@ -390,6 +408,7 @@ async function resetStudentPasswordWithOtp(req, res) {
   return res.json({ message: "Password reset successful" });
 }
 
+// Create or update the TPO account after OTP verification succeeds.
 async function tpoSignup(req, res) {
   const pending = await getPendingSignupForVerification({ role: "tpo", signupToken: req.body.signupToken });
   if (!pending.emailVerified) {
@@ -452,6 +471,7 @@ async function tpoSignup(req, res) {
   });
 }
 
+// Validate the TPO form and send the signup OTP email.
 async function requestTpoSignupOtp(req, res) {
   await resolveTpoSignupContext(req.body);
   const pending = await upsertPendingSignup(buildTpoPendingPayload(req.body));
@@ -463,6 +483,7 @@ async function requestTpoSignupOtp(req, res) {
   });
 }
 
+// Verify the TPO signup OTP before allowing final registration.
 async function verifyTpoSignupOtp(req, res) {
   const { signupToken, otp } = req.body;
   const pending = await getPendingSignupForVerification({ role: "tpo", signupToken });
@@ -474,6 +495,7 @@ async function verifyTpoSignupOtp(req, res) {
   });
 }
 
+// Authenticate a TPO by email or phone and issue a JWT token.
 async function tpoLogin(req, res) {
   const { identifier, email, phone, password } = req.body;
   const loginIdentifier = String(identifier || email || phone || "").trim();

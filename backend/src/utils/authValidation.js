@@ -1,18 +1,22 @@
+// Validates student and TPO authentication form input before processing.
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRegex = /^\d{10}$/;
 const nameRegex = /^[A-Za-z][A-Za-z\s.'-]*$/;
 const { getPlacementYearOptions, normalizePlacementYear } = require("./placementYear");
 
+// Trim text input before validation checks are applied.
 function normalizeText(value) {
   return String(value || "").trim();
 }
 
+// Create a reusable validation error with a 400 status code.
 function createValidationError(message) {
   const err = new Error(message);
   err.statusCode = 400;
   return err;
 }
 
+// Validate the shared signup fields used by both student and TPO forms.
 function validateCommonSignupFields({ name, email, password, phone }) {
   const normalizedName = normalizeText(name);
   const normalizedEmail = normalizeText(email);
@@ -32,6 +36,7 @@ function validateCommonSignupFields({ name, email, password, phone }) {
   if (!phoneRegex.test(normalizedPhone)) throw createValidationError("Phone number must be 10 digits");
 }
 
+// Validate the student-specific signup fields before account creation.
 function validateStudentSignupInput({ name, email, password, phone, placementYear }) {
   validateCommonSignupFields({ name, email, password, phone });
 
@@ -42,6 +47,7 @@ function validateStudentSignupInput({ name, email, password, phone, placementYea
   }
 }
 
+// Validate the TPO-specific signup fields before account creation.
 function validateTpoSignupInput({ name, email, password, collegeName, phone }) {
   validateCommonSignupFields({ name, email, password, phone });
 

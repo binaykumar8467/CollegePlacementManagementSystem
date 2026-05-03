@@ -1,3 +1,4 @@
+// Defines the MongoDB schema for student job applications.
 const mongoose = require("mongoose");
 
 const studentSnapshotSchema = new mongoose.Schema(

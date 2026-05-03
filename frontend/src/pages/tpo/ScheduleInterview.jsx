@@ -1,13 +1,17 @@
+// Provides the interface for scheduling interviews for selected candidates.
 import React, { useState } from "react";
 import api from "../../lib/api";
 
+// Render the interview-scheduling form used from management pages.
 export default function ScheduleInterview({ applicationId, onDone }) {
   const [form, setForm] = useState({ round: "Round 1", dateTime: "", mode: "OFFLINE", location: "", note: "" });
   const [err, setErr] = useState("");
   const [msg, setMsg] = useState("");
 
+// Handle the on change logic used in this file.
   const onChange=(k,v)=>setForm(s=>({...s,[k]:v}));
 
+// Handle the submit logic used in this file.
   const submit = async (e) => {
     e.preventDefault();
     setErr(""); setMsg("");
