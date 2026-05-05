@@ -983,6 +983,12 @@ body:not(.college-theme) .nav small.muted{ color:#fff !important; }
 .quick-link-card strong{ display:inline-block; padding-right: 14px; }
 .profile-photo-preview{ display:block; }
 
+body.dark-theme:not(.college-theme) .quick-link-card strong,
+body.dark-theme:not(.college-theme) .quick-link-card a,
+body.dark-theme:not(.college-theme) .quick-link-card a strong{
+  color: #f8fbff !important;
+}
+
 .dashboard-interviews-btn,
 .dashboard-interviews-btn .nav-with-dot,
 .dashboard-interviews-btn .nav-with-dot *{
